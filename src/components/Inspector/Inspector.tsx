@@ -117,6 +117,26 @@ export function Inspector({ stage, status, data, onRun }: InspectorProps) {
                 <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--muted)", lineHeight: 1.6 }}>
                   {aiConf.improvementTips.map((tip, i) => <li key={i}>{tip}</li>)}
                 </ul>
+                {status === "review" && (
+                  <button
+                    onClick={onRun}
+                    style={{
+                      marginTop: 10,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 5,
+                      fontSize: 11.5,
+                      color: "var(--accent)",
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Icon name="settings" size={12} />
+                    Applied a tip? Re-run to recalculate
+                  </button>
+                )}
               </div>
             ) : (
               <div style={{ fontSize: 11.5, color: "var(--faint)", marginTop: 8 }}>
