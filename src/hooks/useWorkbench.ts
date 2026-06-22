@@ -4,7 +4,9 @@ import type { WorkbenchState, StageId, StageData, StageStatus } from "@/lib/type
 import { STAGES, STAGE_IDS, AI_STAGES, stageIndex, nextStageId } from "@/lib/stages";
 import { SOURCES } from "@/lib/mocks";
 import { buildContext } from "@/lib/context-builder";
+import { mergeStageData } from "@/lib/merge";
 import { LOCAL_STORAGE_KEY } from "@/utils/constants";
+import { serializeSession, deserializeSession, saveWithPicker } from "@/lib/save-load";
 
 // ── initial state ─────────────────────────────────────────────────────────────
 
@@ -26,6 +28,7 @@ function defaultState(): WorkbenchState {
     elapsed: 0,
     frozen: false,
     live: true,
+    preserve: true,
     copilotMessages: [],
   };
 }
@@ -38,6 +41,7 @@ function loadState(): WorkbenchState {
       if (s?.status) {
         s.data = (s.data ?? {}) as WorkbenchState["data"];
         if (s.live === undefined) s.live = true;
+        if (s.preserve === undefined) s.preserve = true;
         if (!s.copilotMessages) s.copilotMessages = [];
         return s;
       }
@@ -106,10 +110,13 @@ export function useWorkbench() {
         const json = await res.json();
         if (json.success && json.data) {
           setSt((p) => {
+            const merged = p.preserve
+              ? mergeStageData(stage.kind, p.data[id], json.data)
+              : json.data;
             const next: WorkbenchState = {
               ...p,
               status: { ...p.status, [id]: "review" },
-              data: { ...p.data, [id]: json.data },
+              data: { ...p.data, [id]: merged },
             };
             if (id === "discovery") next.answers = {};
             return next;
@@ -240,6 +247,26 @@ export function useWorkbench() {
     setSt((p) => ({ ...p, live: !p.live }));
   }, []);
 
+  const togglePreserve = useCallback(() => {
+    setSt((p) => ({ ...p, preserve: !p.preserve }));
+  }, []);
+
+  const saveToFile = useCallback(async () => {
+    const json = serializeSession(stRef.current);
+    const epicData = stRef.current.data.epic as { title?: string } | undefined;
+    const title = epicData?.title;
+    const filename = title
+      ? `${title.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "")}.json`
+      : "po-workbench-session.json";
+    await saveWithPicker(json, filename);
+  }, []);
+
+  const loadFromFile = useCallback(async (file: File) => {
+    const raw = await file.text();
+    const state = deserializeSession(raw); // throws on invalid input
+    setSt(state);
+  }, []);
+
   const addCopilotMessage = useCallback(
     (role: "user" | "assistant", content: string, stage?: StageId) => {
       setSt((p) => ({
@@ -284,6 +311,9 @@ export function useWorkbench() {
     setSourceId,
     restart,
     toggleLiveAI,
+    togglePreserve,
     addCopilotMessage,
+    saveToFile,
+    loadFromFile,
   };
 }

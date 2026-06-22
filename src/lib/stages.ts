@@ -36,8 +36,8 @@ export const STAGES: StageMetadata[] = [
     title: "Business Need",
     desc: "The underlying problem, the outcome we want, and how we'll know it worked — extracted from the raw input.",
     skillName: "business-need-analyzer",
-    purpose: "Extract the business problem, desired outcomes, and success metrics from a stakeholder statement.",
-    io: { in: "Stakeholder statement", out: "businessProblem · outcomes[] · successMetrics[]" },
+    purpose: "Extract the business problem and desired outcomes (including measurable success criteria) from a stakeholder statement.",
+    io: { in: "Stakeholder statement", out: "businessProblem · outcomes[]" },
   },
   {
     id: "requirement-analysis",
@@ -152,7 +152,5 @@ export const AI_STAGES = new Set<StageId>([
 
 export const EXPORT_TARGETS = [
   { id: "md", name: "Markdown", sub: "Copy or download .md", icon: "markdown" },
-  { id: "jira", name: "Jira", sub: "Create epic + stories", icon: "jira" },
-  { id: "azure", name: "Azure DevOps", sub: "Create work items", icon: "azure" },
-  { id: "linear", name: "Linear", sub: "Create project + issues", icon: "linear" },
+  { id: "pdf", name: "PDF", sub: "Sprint artifact · copy-paste ready", icon: "download" },
 ];

@@ -28,11 +28,6 @@ export function buildMarkdown(all: Partial<Record<StageId, StageData>>): string 
     (need.outcomes ?? []).forEach((o) => L.push("- " + o));
     L.push("");
   }
-  if ((need.successMetrics ?? []).length) {
-    L.push("**Success metrics**");
-    (need.successMetrics ?? []).forEach((o) => L.push("- " + o));
-    L.push("");
-  }
   if (epic.description) {
     L.push("## Epic");
     L.push(epic.description);

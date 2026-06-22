@@ -58,6 +58,8 @@ export function Icon({ name, size = 16, strokeWidth = 1.6, className = "", style
     case "command": return <svg {...p}><path d="M9 6a3 3 0 1 0 3 3h0v6h0a3 3 0 1 0-3-3h6a3 3 0 1 0-3 3V9a3 3 0 1 0 3-3" /></svg>;
     case "send": return <svg {...p}><path d="M4 12 20 4l-6 16-3-7-7-1Z" /></svg>;
     case "download": return <svg {...p}><path d="M12 4v11M7 11l5 4 5-4M5 20h14" /></svg>;
+    case "save": return <svg {...p}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z" /><path d="M17 21v-8H7v8M7 3v5h8" /></svg>;
+    case "upload": return <svg {...p}><path d="M12 20V9M7 14l5-5 5 5M5 20h14" /></svg>;
     case "copy": return <svg {...p}><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" /></svg>;
     case "code": return <svg {...p}><path d="m8 8-4 4 4 4M16 8l4 4-4 4M13 6l-2 12" /></svg>;
     case "inbox": return <svg {...p}><path d="M4 13h4l1.5 3h5L16 13h4" /><path d="M4 13 6 5h12l2 8v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-5Z" /></svg>;

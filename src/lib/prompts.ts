@@ -12,9 +12,10 @@ export function getPrompt(stageKind: string, ctx: StageContext): string | null {
 ${input}
 """
 Extract the underlying business need. If the note is vague, infer reasonable, specific details and keep every metric measurable.
+List 5-7 distinct desired outcomes. Include both qualitative goals and measurable success criteria (with targets and timelines where possible) all in the same outcomes array — do not create a separate metrics section.
 Rate your confidence (0-100) based on clarity and completeness of the input. Provide up to 3 tips describing what was missing or ambiguous in the user's input that would improve this confidence.
 Respond with ONLY minified JSON, no markdown, exactly this shape:
-{"businessProblem":"1-2 sentences","outcomes":["3 desired business outcomes"],"successMetrics":["3 measurable success metrics"],"confidence":<0-100 integer>,"improvementTips":["tip 1","tip 2","tip 3"]}`;
+{"businessProblem":"1-2 sentences","outcomes":["5-7 distinct desired outcomes and measurable success criteria"],"confidence":<0-100 integer>,"improvementTips":["tip 1","tip 2","tip 3"]}`;
 
     case "requirement":
       return `You are a product manager. Original note:
@@ -29,10 +30,13 @@ Respond with ONLY minified JSON:
       return `You are a product manager running discovery to remove ambiguity from a vague requirement before it can be built.
 Original note: """${input}"""
 Open questions so far: ${J(ctx.requirement?.openQuestions)}
-Write 3-4 clarifying questions that, once answered, make this buildable. Each MUST be answerable by choosing one short option. Set "origin":"open" if it resolves one of the open questions above, otherwise "edge".
+Write 3-5 clarifying questions that, once answered, remove critical ambiguity and make this requirement buildable. For each question include:
+- "why": 1-2 sentences explaining why the answer matters for writing a clear, complete backlog item
+- "examples": 2-4 concrete example answers (not a forced choice — just to illustrate useful input that would help you write this backlog item)
+Set "origin":"open" if it resolves one of the open questions above, otherwise "edge".
 Rate your confidence (0-100) based on clarity and completeness of the input. Provide up to 3 tips describing what was missing or ambiguous in the user's input that would improve this confidence.
 Respond with ONLY minified JSON:
-{"questions":[{"q":"the question","opts":["2-4 short answer options"],"origin":"open"}],"confidence":<0-100 integer>,"improvementTips":["tip 1","tip 2","tip 3"]}`;
+{"questions":[{"q":"the question","why":"why this matters for the backlog","examples":["example 1","example 2"],"origin":"open"}],"confidence":<0-100 integer>,"improvementTips":["tip 1","tip 2","tip 3"]}`;
 
     case "epic":
       return `You are a product manager. Turn the clarified requirement into a single epic.
@@ -41,16 +45,23 @@ Business need: ${J(ctx.need)}
 Discovery answers: ${J(ctx.discovery?.answers)}
 Rate your confidence (0-100) based on clarity and completeness of the input. Provide up to 3 tips describing what was missing or ambiguous in the user's input that would improve this confidence.
 Respond with ONLY minified JSON:
-{"title":"short epic title","description":"2-3 sentence description","subFeatures":["4-6 short sub-features"],"confidence":<0-100 integer>,"improvementTips":["tip 1","tip 2","tip 3"]}`;
+{"title":"short epic title","description":"2-3 sentence description","subFeatures":["4-6 sub-features, each as an active verb phrase: '<Verb> <business object> <business outcome>' (e.g. 'Analyze CRM notes to identify opportunities', 'Detect at-risk accounts from customer interactions')"],"confidence":<0-100 integer>,"improvementTips":["tip 1","tip 2","tip 3"]}`;
 
-    case "story":
-      return `You are a product manager. Slice this epic into prioritized user stories, highest priority first.
-Epic: ${J(ctx.epic)}
+    case "story": {
+      const features = ctx.epic?.subFeatures ?? [];
+      const storyCount = Math.max(features.length, 1);
+      const featureList = features.map((f, i) => `${i + 1}. ${f}`).join("\n");
+      return `You are a product manager. Write exactly ${storyCount} user stories — one per sub-feature below, in order.
+Sub-features:
+${featureList}
+
+Epic context: ${J(ctx.epic)}
 Discovery answers: ${J(ctx.discovery?.answers)}
-Return 3-4 stories. Each field is a SHORT phrase and must NOT include the words "As a", "I want", or "So that".
+Each field is a SHORT phrase and must NOT include the words "As a", "I want", or "So that".
 Rate your confidence (0-100) based on clarity and completeness of the input. Provide up to 3 tips describing what was missing or ambiguous in the user's input that would improve this confidence.
 Respond with ONLY minified JSON:
 {"stories":[{"as":"user role","want":"capability","so":"benefit"}],"confidence":<0-100 integer>,"improvementTips":["tip 1","tip 2","tip 3"]}`;
+    }
 
     case "readiness":
       return `You are a delivery lead assessing sprint readiness for this work.

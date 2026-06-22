@@ -30,8 +30,8 @@ export function normalizeStage(kind: string, data: Record<string, unknown>): Sta
     case "need":
       return {
         businessProblem: str(data.businessProblem),
-        outcomes: arr(data.outcomes),
-        successMetrics: arr(data.successMetrics),
+        // Merge successMetrics into outcomes for backward compat with cached data
+        outcomes: [...arr(data.outcomes), ...arr(data.successMetrics)],
         confidence: clampInt(data.confidence, 0, 100, 85),
         improvementTips: arr(data.improvementTips).slice(0, 3),
       } satisfies BusinessNeedData;
@@ -54,9 +54,11 @@ export function normalizeStage(kind: string, data: Record<string, unknown>): Sta
           id: "q" + (i + 1),
           q: str(q.q ?? q.question),
           opts: arr(q.opts ?? q.options).slice(0, 4),
+          why: str(q.why),
+          examples: arr(q.examples).slice(0, 4),
           origin: (q.origin === "edge" ? "edge" : "open") as "open" | "edge",
         }))
-        .filter((q) => q.q && q.opts.length);
+        .filter((q) => q.q);
       return {
         questions,
         confidence: clampInt(data.confidence, 0, 100, 85),

@@ -12,6 +12,8 @@ interface InspectorProps {
   status: StageStatus;
   data: StageData;
   onRun: () => void;
+  preserve: boolean;
+  onTogglePreserve: () => void;
 }
 
 function ReadinessSignals({ data }: { data: ReadinessData }) {
@@ -49,12 +51,10 @@ function ReadinessSignals({ data }: { data: ReadinessData }) {
   );
 }
 
-export function Inspector({ stage, status, data, onRun }: InspectorProps) {
+export function Inspector({ stage, status, data, onRun, preserve, onTogglePreserve }: InspectorProps) {
   const [showJson, setShowJson] = useState(false);
-  const [checkedTips, setCheckedTips] = useState<Set<string>>(new Set());
   useEffect(() => {
     setShowJson(false);
-    setCheckedTips(new Set());
   }, [stage.id]);
 
   const produced = status === "review" || status === "done";
@@ -99,6 +99,19 @@ export function Inspector({ stage, status, data, onRun }: InspectorProps) {
           )}
         </div>
 
+        {!isInbox && !isExport && (
+          <label className="preserve-toggle">
+            <input
+              type="checkbox"
+              className="preserve-check"
+              checked={preserve}
+              onChange={onTogglePreserve}
+            />
+            <span className="preserve-track" />
+            <span className="preserve-label-text">Keep & append on re-run</span>
+          </label>
+        )}
+
         {!isExport && (
           <button
             className={`btn ${status === "ready" ? "primary" : ""} lg`}
@@ -113,45 +126,6 @@ export function Inspector({ stage, status, data, onRun }: InspectorProps) {
           <div className="insp-block">
             <div className="insp-block-title"><div className="eyebrow">Extraction confidence<Tooltip text="How accurately the AI identified and extracted relevant content from your inputs for this stage." /></div></div>
             <Meter label="Model confidence" tooltip="The AI model's certainty about the quality of its output (0–100%). Scores ≥ 85% indicate high confidence (green); below 85% warrants closer review (amber)." value={aiConf.confidence} suffix="%" tone={aiConf.confidence >= 85 ? "green" : "amber"} />
-            {aiConf.improvementTips?.length ? (
-              <div style={{ marginTop: 12 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: aiConf.confidence >= 85 ? "var(--faint)" : "var(--amber)", marginBottom: 6 }}>
-                  {aiConf.confidence >= 85 ? "To reach 100%:" : "To increase confidence:"}
-                </div>
-                <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: 12, lineHeight: 1.6 }}>
-                  {aiConf.improvementTips.map((tip, i) => {
-                    const checked = checkedTips.has(tip);
-                    return (
-                      <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: 7, marginBottom: 5 }}>
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={(e) => {
-                            setCheckedTips((prev) => {
-                              const next = new Set(prev);
-                              if (e.target.checked) next.add(tip);
-                              else next.delete(tip);
-                              return next;
-                            });
-                          }}
-                          style={{ marginTop: 2, flexShrink: 0, cursor: "pointer", accentColor: "var(--accent)" }}
-                        />
-                        <span style={{
-                          textDecoration: checked ? "line-through" : "none",
-                          color: checked ? "var(--faint)" : "var(--muted)",
-                        }}>
-                          {tip}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ) : (
-              <div style={{ fontSize: 11.5, color: "var(--faint)", marginTop: 8 }}>
-                A skill output, not a decision. Review before confirming.
-              </div>
-            )}
           </div>
         )}
 

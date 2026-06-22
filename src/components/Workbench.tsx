@@ -21,6 +21,7 @@ export function Workbench() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [editingStage, setEditingStage] = useState<StageId | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   usePersist(st);
 
@@ -119,44 +120,50 @@ export function Workbench() {
 
   const handleExport = useCallback(
     async (target: { id: string; name: string }) => {
-      if (target.id === "markdown") {
-        // built into the export stage — just jump there
+      if (target.id === "md") {
         wb.goTo("export", showToast);
         return;
       }
-      if (target.id === "csv") {
+      if (target.id === "pdf") {
         try {
-          const res = await fetch("/api/export/csv", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              epic: st.data.epic,
-              stories: (st.data["user-story"] as { stories?: unknown[] } | undefined)?.stories ?? [],
-              ac: (st.data["acceptance-criteria"] as { rows?: unknown[] } | undefined)?.rows ?? [],
-            }),
-          });
-          const json = await res.json();
-          if (json.csv) {
-            const blob = new Blob([json.csv], { type: "text/csv" });
-            const a = document.createElement("a");
-            a.href = URL.createObjectURL(blob);
-            a.download = json.filename ?? "workbench-export.csv";
-            a.click();
-            showToast("CSV downloaded", "download");
-          }
+          const { buildAndDownloadPdf } = await import("@/lib/pdf-builder");
+          buildAndDownloadPdf(st.data, wb.epicTitle ?? undefined);
+          showToast("PDF downloaded", "download");
         } catch {
-          showToast("CSV export failed", "alert");
+          showToast("PDF generation failed", "alert");
         }
         return;
       }
-      if (target.id === "jira") {
-        showToast("Jira export — copy the payload below", "link");
-        wb.goTo("export", showToast);
-        return;
-      }
-      showToast(`Exported to ${target.name}`, "download");
     },
     [wb, st.data, showToast]
+  );
+
+  const handleSave = useCallback(async () => {
+    try {
+      await wb.saveToFile();
+      showToast("Session saved", "save");
+    } catch {
+      showToast("Save failed", "alert");
+    }
+  }, [wb, showToast]);
+
+  const handleLoad = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      e.target.value = "";
+      try {
+        await wb.loadFromFile(file);
+        showToast("Session restored", "check-circle");
+      } catch (err) {
+        showToast((err as Error).message || "Invalid session file", "alert");
+      }
+    },
+    [wb, showToast]
   );
 
   const currentStatus = st.status[st.current];
@@ -166,6 +173,13 @@ export function Workbench() {
 
   return (
     <div className="wb">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        style={{ display: "none" }}
+        onChange={handleFileChange}
+      />
       <TopBar
         epicTitle={wb.epicTitle ?? ""}
         elapsedStr={elapsedStr}
@@ -175,6 +189,8 @@ export function Workbench() {
         onCopilot={() => setCopilotOpen((o) => !o)}
         onExport={() => wb.goTo("export", showToast)}
         exportReachable={wb.exportReachable}
+        onSave={handleSave}
+        onLoad={handleLoad}
       />
 
       <div className="wb-body">
@@ -249,6 +265,8 @@ export function Workbench() {
           status={currentStatus}
           data={st.data[st.current]}
           onRun={handleRun}
+          preserve={st.preserve}
+          onTogglePreserve={wb.togglePreserve}
         />
       </div>
 

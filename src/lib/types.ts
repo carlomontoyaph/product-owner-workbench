@@ -28,7 +28,6 @@ export type StageStatus = "locked" | "ready" | "running" | "review" | "done";
 export interface BusinessNeedData {
   businessProblem: string;
   outcomes: string[];
-  successMetrics: string[];
   confidence?: number;
   improvementTips?: string[];
 }
@@ -47,6 +46,8 @@ export interface DiscoveryQuestion {
   id: string;
   q: string;
   opts: string[];
+  why?: string;
+  examples?: string[];
   origin?: "open" | "edge";
 }
 
@@ -134,6 +135,7 @@ export interface WorkbenchState {
   elapsed: number;
   frozen: boolean;
   live: boolean;
+  preserve: boolean;
   copilotMessages: CopilotMessage[];
 }
 

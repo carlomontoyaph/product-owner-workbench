@@ -10,9 +10,11 @@ interface TopBarProps {
   onCopilot: () => void;
   onExport: () => void;
   exportReachable: boolean;
+  onSave: () => void;
+  onLoad: () => void;
 }
 
-export function TopBar({ epicTitle, elapsedStr, live, onToggleLive, onCommand, onCopilot, onExport, exportReachable }: TopBarProps) {
+export function TopBar({ epicTitle, elapsedStr, live, onToggleLive, onCommand, onCopilot, onExport, exportReachable, onSave, onLoad }: TopBarProps) {
   return (
     <header className="topbar">
       <div className="topbar-left">
@@ -32,6 +34,16 @@ export function TopBar({ epicTitle, elapsedStr, live, onToggleLive, onCommand, o
         <div className="timer-chip">
           <Icon name="clock" size={13} />
           <span className="mono" style={{ fontSize: 12 }}>{elapsedStr}</span>
+        </div>
+
+        <div className="session-group" title="Save or load a session file">
+          <button className="btn sm session-save" onClick={onSave} title="Save session as JSON — choose where to save">
+            <Icon name="save" size={14} />Save
+          </button>
+          <span className="session-sep" />
+          <button className="btn ghost sm" onClick={onLoad} title="Load a previously saved session JSON">
+            <Icon name="upload" size={14} />Load
+          </button>
         </div>
 
         <button className="btn ghost sm" onClick={onCommand} title="Command palette (⌘K)">

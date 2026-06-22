@@ -47,7 +47,7 @@ function ListEditor({ items, setItems, addLabel = "Add item", qStyle = false, pl
 }) {
   return (
     <div className="items">
-      {items.map((t, i) => (
+      {items.map((t, i) => ({ t, i })).map(({ t, i }) => (
         <div key={i} className={`edit-row${qStyle ? " q" : ""}`}>
           <span className="dot" />
           <AutoTextarea value={t} placeholder={placeholder} onChange={(v) => { const a = items.slice(); a[i] = v; setItems(a); }} />
@@ -64,7 +64,7 @@ function ChipsEditor({ items, setItems, icon, addLabel = "Add" }: {
 }) {
   return (
     <div className="chips">
-      {items.map((t, i) => (
+      {items.map((t, i) => ({ t, i })).filter(({ t }) => t.trim()).map(({ t, i }) => (
         <span key={i} className="chip edit">
           {icon && <span className="ico"><Icon name={icon} size={12} /></span>}
           <input
@@ -107,7 +107,7 @@ function HelpRow({ text, qStyle, delay }: { text: string; qStyle?: boolean; dela
 function ItemList({ items, qStyle }: { items: string[]; qStyle?: boolean }) {
   return (
     <div className="items">
-      {items.map((t, i) => <HelpRow key={i} text={t} qStyle={qStyle} delay={(i * 45) + "ms"} />)}
+      {items.filter(t => t.trim()).map((t, i) => <HelpRow key={i} text={t} qStyle={qStyle} delay={(i * 45) + "ms"} />)}
     </div>
   );
 }
@@ -160,6 +160,67 @@ function RunningView({ stage, live }: { stage: StageMetadata; live: boolean }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ── features list ──────────────────────────────────────────────────────────────
+
+function FeaturesList({ items, editing, onReorder, onChange, onAdd, onDelete, addLabel }: {
+  items: string[]; editing: boolean;
+  onReorder: (fn: (items: string[]) => string[]) => void;
+  onChange: (i: number, value: string) => void;
+  onAdd: () => void; onDelete: (i: number) => void;
+  addLabel?: string;
+}) {
+  const [dragIdx, setDragIdx] = useState(-1);
+  const [overIdx, setOverIdx] = useState(-1);
+
+  const move = (from: number, to: number) => {
+    if (to < 0 || to >= items.length || from === to) return;
+    onReorder((prev) => {
+      const a = [...prev];
+      const [it] = a.splice(from, 1);
+      a.splice(to, 0, it);
+      return a;
+    });
+  };
+
+  const filtered = editing
+    ? items.map((item, i) => ({ item, i }))
+    : items.map((item, i) => ({ item, i })).filter(({ item }) => item.trim());
+
+  return (
+    <div className="features-list">
+      {filtered.map(({ item, i }) => (
+        <div
+          key={i}
+          className={`feature-item${dragIdx === i ? " dragging" : ""}${overIdx === i && dragIdx !== i && dragIdx >= 0 ? " dropring" : ""}`}
+          draggable={!editing}
+          onDragStart={(e) => { setDragIdx(i); e.dataTransfer.effectAllowed = "move"; }}
+          onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (overIdx !== i) setOverIdx(i); }}
+          onDragLeave={() => setOverIdx((o) => (o === i ? -1 : o))}
+          onDrop={(e) => { e.preventDefault(); if (dragIdx >= 0) move(dragIdx, i); setDragIdx(-1); setOverIdx(-1); }}
+          onDragEnd={() => { setDragIdx(-1); setOverIdx(-1); }}
+        >
+          {!editing && <span className="feature-grip" title="Drag to reorder"><Icon name="grip" size={16} /></span>}
+          {editing
+            ? <AutoTextarea className="feature-body" value={item} placeholder="Describe a sub-feature…" onChange={(v) => onChange(i, v)} onBlur={() => { if (!item.trim()) onDelete(i); }} />
+            : <div className="feature-body">{item}</div>}
+
+          <div className="feature-moves">
+            <button className="move-btn" disabled={i === 0} title="Move up" aria-label="Move up" onClick={() => move(i, i - 1)}><Icon name="arrow-up" size={16} /></button>
+            <button className="move-btn" disabled={i === items.length - 1} title="Move down" aria-label="Move down" onClick={() => move(i, i + 1)}><Icon name="arrow-down" size={16} /></button>
+            <span className="feature-moves-sep" />
+            <button className="move-btn del" title="Delete feature" onClick={() => onDelete(i)}><Icon name="trash" size={14} /></button>
+          </div>
+        </div>
+      ))}
+      {editing && (
+        <button className="feature-add-btn" onClick={onAdd}>
+          <Icon name="plus" size={14} />{addLabel ?? "Add sub-feature"}
+        </button>
+      )}
     </div>
   );
 }
@@ -343,16 +404,10 @@ export function StageRenderer(props: StageRendererProps) {
               : <div className="card pad" style={{ fontSize: 15, lineHeight: 1.6, color: "var(--ink)" }}>{nd.businessProblem}</div>}
           </div>
           <div>
-            <SecLabel icon="target" count={(nd.outcomes ?? []).length}>Desired outcomes</SecLabel>
+            <SecLabel icon="target" count={(nd.outcomes ?? []).filter(o => o.trim()).length}>Desired outcomes</SecLabel>
             {editing
               ? <ListEditor items={nd.outcomes ?? []} setItems={(a) => setField("outcomes", a)} addLabel="Add outcome" placeholder="Describe a desired outcome…" />
               : <ItemList items={nd.outcomes ?? []} />}
-          </div>
-          <div>
-            <SecLabel icon="gauge" count={(nd.successMetrics ?? []).length}>Success metrics</SecLabel>
-            {editing
-              ? <ListEditor items={nd.successMetrics ?? []} setItems={(a) => setField("successMetrics", a)} addLabel="Add metric" placeholder="Describe a measurable metric…" />
-              : <ItemList items={nd.successMetrics ?? []} />}
           </div>
         </div>
       );
@@ -402,27 +457,31 @@ export function StageRenderer(props: StageRendererProps) {
                       <AutoTextarea value={q.q} onChange={(v) => mutate((o) => { (o as unknown as DiscoveryData).questions[i].q = v; })} placeholder="Clarifying question…" />
                       <button className="row-del" onClick={() => mutate((o) => { (o as unknown as DiscoveryData).questions.splice(i, 1); })}><Icon name="trash" size={14} /></button>
                     </div>
-                    <div className="q-edit-opts">
-                      <div className="eyebrow" style={{ marginBottom: 7 }}>Answer options</div>
-                      <ChipsEditor items={q.opts} setItems={(a) => mutate((o) => { (o as unknown as DiscoveryData).questions[i].opts = a; })} addLabel="Add option" />
-                    </div>
                   </div>
                 ) : (
                   <>
                     {q.origin && <div className="q-prov">{q.origin === "edge" ? <Badge variant="neutral" icon="bulb">Edge case surfaced by the skill</Badge> : <Badge variant="info" icon="compass">Resolves an open question</Badge>}</div>}
                     <div className="q-text"><span className="q-num">Q{i + 1}</span><span>{q.q}</span></div>
-                    <div className="q-opts">
-                      {q.opts.map((opt) => (
-                        <button key={opt} className={`q-opt${answers[q.id] === opt ? " sel" : ""}`} onClick={() => setAnswer(q.id, opt)}>{opt}</button>
-                      ))}
+                    {q.why && (
+                      <div className="q-why">{q.why}</div>
+                    )}
+                    {(q.examples ?? []).length > 0 && (
+                      <div className="q-examples">
+                        <span className="q-examples-label">e.g.</span>
+                        {(q.examples ?? []).map((ex, j) => (
+                          <span key={j} className="q-example-chip">{ex}</span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="q-answer-wrap">
+                      <AutoTextarea value={answers[q.id] ?? ""} onChange={(v) => setAnswer(q.id, v)} placeholder="Type your answer…" />
                     </div>
-                    {answers[q.id] && <div className="q-answered"><Icon name="check-circle" size={14} />Answer captured — ambiguity reduced</div>}
                   </>
                 )}
               </div>
             ))}
             {editing && (
-              <button className="row-add" onClick={() => mutate((o) => { (o as unknown as DiscoveryData).questions.push({ id: "q" + Date.now(), q: "", opts: ["Option A", "Option B"], origin: "open" }); })}>
+              <button className="row-add" onClick={() => mutate((o) => { (o as unknown as DiscoveryData).questions.push({ id: "q" + Date.now(), q: "", opts: [], origin: "open" }); })}>
                 <Icon name="plus" size={14} />Add question
               </button>
             )}
@@ -452,9 +511,15 @@ export function StageRenderer(props: StageRendererProps) {
           </div>
           <div>
             <SecLabel icon="list" count={(ed.subFeatures ?? []).length}>Sub-features</SecLabel>
-            {editing
-              ? <ChipsEditor items={ed.subFeatures ?? []} setItems={(a) => setField("subFeatures", a)} addLabel="Add sub-feature" />
-              : <HelpChips items={ed.subFeatures ?? []} />}
+            {!editing && <div className="hint-row" style={{ marginTop: 0 }}><Icon name="grip" size={13} /><span>Drag an item — or use ↑ ↓ — to set priority.</span></div>}
+            <FeaturesList
+              items={ed.subFeatures ?? []}
+              editing={editing}
+              onReorder={(fn) => setField("subFeatures", fn(ed.subFeatures ?? []))}
+              onChange={(i, v) => { const a = [...(ed.subFeatures ?? [])]; a[i] = v; setField("subFeatures", a); }}
+              onAdd={() => setField("subFeatures", [...(ed.subFeatures ?? []), ""])}
+              onDelete={(i) => setField("subFeatures", (ed.subFeatures ?? []).filter((_, j) => j !== i))}
+            />
           </div>
         </div>
       );
@@ -590,15 +655,31 @@ export function StageRenderer(props: StageRendererProps) {
 
           <div>
             <SecLabel icon="git">Dependencies</SecLabel>
-            <div className="card pad stack-sm">
-              <div><div className="eyebrow" style={{ marginBottom: 7 }}>Internal</div>
-                {editing
-                  ? <ChipsEditor items={rd.dependencies?.internal ?? []} setItems={(a) => mutate((o) => { (o as unknown as ReadinessData).dependencies.internal = a; })} icon="git" addLabel="Add internal" />
-                  : <HelpChips items={rd.dependencies?.internal ?? []} icon="git" />}</div>
-              <div><div className="eyebrow" style={{ marginBottom: 7 }}>External</div>
-                {editing
-                  ? <ChipsEditor items={rd.dependencies?.external ?? []} setItems={(a) => mutate((o) => { (o as unknown as ReadinessData).dependencies.external = a; })} icon="link" addLabel="Add external" />
-                  : <HelpChips items={rd.dependencies?.external ?? []} icon="link" />}</div>
+            <div className="stack-sm" style={{ marginTop: 8 }}>
+              <div>
+                <div className="eyebrow" style={{ marginBottom: 7 }}>Internal</div>
+                <FeaturesList
+                  items={rd.dependencies?.internal ?? []}
+                  editing={editing}
+                  addLabel="Add internal dependency"
+                  onReorder={(fn) => setField("dependencies", { ...rd.dependencies, internal: fn(rd.dependencies?.internal ?? []) })}
+                  onChange={(i, v) => { const a = [...(rd.dependencies?.internal ?? [])]; a[i] = v; setField("dependencies", { ...rd.dependencies, internal: a }); }}
+                  onAdd={() => setField("dependencies", { ...rd.dependencies, internal: [...(rd.dependencies?.internal ?? []), ""] })}
+                  onDelete={(i) => setField("dependencies", { ...rd.dependencies, internal: (rd.dependencies?.internal ?? []).filter((_, j) => j !== i) })}
+                />
+              </div>
+              <div>
+                <div className="eyebrow" style={{ marginBottom: 7 }}>External</div>
+                <FeaturesList
+                  items={rd.dependencies?.external ?? []}
+                  editing={editing}
+                  addLabel="Add external dependency"
+                  onReorder={(fn) => setField("dependencies", { ...rd.dependencies, external: fn(rd.dependencies?.external ?? []) })}
+                  onChange={(i, v) => { const a = [...(rd.dependencies?.external ?? [])]; a[i] = v; setField("dependencies", { ...rd.dependencies, external: a }); }}
+                  onAdd={() => setField("dependencies", { ...rd.dependencies, external: [...(rd.dependencies?.external ?? []), ""] })}
+                  onDelete={(i) => setField("dependencies", { ...rd.dependencies, external: (rd.dependencies?.external ?? []).filter((_, j) => j !== i) })}
+                />
+              </div>
             </div>
           </div>
 
