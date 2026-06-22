@@ -74,6 +74,17 @@ Rate your confidence (0-100) based on clarity and completeness of the story. Pro
 Respond with ONLY minified JSON: {"normal":["..."],"abnormal":["..."],"confidence":<0-100 integer>,"improvementTips":["tip 1","tip 2","tip 3"]}`;
 }
 
+export function getConfidenceOnlyPrompt(stageKind: string, data: unknown): string {
+  return `You are a senior product manager reviewing this "${stageKind}" stage output from a requirement pipeline.
+
+Current output:
+${JSON.stringify(data, null, 2)}
+
+Assess the quality of this output. Rate your confidence (0-100) based on specificity, completeness, and actionability. Provide up to 3 concise tips for what is still missing, vague, or could be made more precise. Return an empty array for improvementTips if the output is already high quality.
+
+Respond with ONLY minified JSON: {"confidence":<0-100 integer>,"improvementTips":["tip 1","tip 2"]}`;
+}
+
 export function getCopilotSystemPrompt(stageName: string): string {
   return `You are a product management assistant helping a product owner with the "${stageName}" stage of their requirement pipeline. Keep responses concise and practical. Focus on agile best practices, clarity, and sprint-readiness. If asked about specific content, reference what the user shares.`;
 }
