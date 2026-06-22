@@ -51,7 +51,11 @@ function ReadinessSignals({ data }: { data: ReadinessData }) {
 
 export function Inspector({ stage, status, data, onRun }: InspectorProps) {
   const [showJson, setShowJson] = useState(false);
-  useEffect(() => { setShowJson(false); }, [stage.id]);
+  const [checkedTips, setCheckedTips] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    setShowJson(false);
+    setCheckedTips(new Set());
+  }, [stage.id]);
 
   const produced = status === "review" || status === "done";
   const isInbox = stage.kind === "inbox";
@@ -114,8 +118,33 @@ export function Inspector({ stage, status, data, onRun }: InspectorProps) {
                 <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: aiConf.confidence >= 85 ? "var(--faint)" : "var(--amber)", marginBottom: 6 }}>
                   {aiConf.confidence >= 85 ? "To reach 100%:" : "To increase confidence:"}
                 </div>
-                <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: "var(--muted)", lineHeight: 1.6 }}>
-                  {aiConf.improvementTips.map((tip, i) => <li key={i}>{tip}</li>)}
+                <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: 12, lineHeight: 1.6 }}>
+                  {aiConf.improvementTips.map((tip, i) => {
+                    const checked = checkedTips.has(tip);
+                    return (
+                      <li key={i} style={{ display: "flex", alignItems: "flex-start", gap: 7, marginBottom: 5 }}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => {
+                            setCheckedTips((prev) => {
+                              const next = new Set(prev);
+                              if (e.target.checked) next.add(tip);
+                              else next.delete(tip);
+                              return next;
+                            });
+                          }}
+                          style={{ marginTop: 2, flexShrink: 0, cursor: "pointer", accentColor: "var(--accent)" }}
+                        />
+                        <span style={{
+                          textDecoration: checked ? "line-through" : "none",
+                          color: checked ? "var(--faint)" : "var(--muted)",
+                        }}>
+                          {tip}
+                        </span>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             ) : (
