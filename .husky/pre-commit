@@ -1,0 +1,20 @@
+#!/bin/sh
+# Pre-commit hook: Prevent committing secrets
+
+# Get list of staged files (exclude .env.local.example which is a template)
+STAGED_FILES=$(git diff --cached --name-only | grep -v "\.example$")
+
+if [ -z "$STAGED_FILES" ]; then
+  exit 0
+fi
+
+# Check for real API keys (not placeholder strings like "sk-proj-YOUR_API_KEY")
+echo "$STAGED_FILES" | xargs git diff --cached -- | grep -E "sk-proj-[A-Za-z0-9_-]{20,}|sk_live_[A-Za-z0-9_-]{20,}" >/dev/null 2>&1
+if [ $? -eq 0 ]; then
+  echo "❌ ERROR: Found potential API keys in staged files!"
+  echo "Do not commit .env.local or actual secret values"
+  echo "Use .env.local (in .gitignore) for your real credentials"
+  exit 1
+fi
+
+exit 0
