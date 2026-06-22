@@ -66,9 +66,9 @@ Uses React hooks and context via `useWorkbench` custom hook in `src/hooks/useWor
 
 - In-memory state only (no persistent backend)
 - Single-user, client-side application
-- OpenAI API key stored in client config (needs secure handling for production)
-- Basic error handling (room for improvement)
-- No analytics or observability
+- OpenAI API key stored securely server-side via `process.env.OPENAI_API_KEY` (never exposed to browser)
+- Basic error handling (room for improvement — see `/product-readiness` audit for details)
+- No analytics or observability (Sentry integration ready but not configured)
 
 ### For Claude Code Sessions
 

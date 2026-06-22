@@ -69,4 +69,13 @@ npm run lint       # Run ESLint
 
 ---
 
+## Ready to Deploy?
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for production deployment instructions covering:
+- **Vercel** (recommended — zero config)
+- **Self-hosted VPS** (nginx + PM2)
+- **Docker** (for container platforms)
+
+---
+
 For more details, see [CLAUDE.md](./CLAUDE.md)
