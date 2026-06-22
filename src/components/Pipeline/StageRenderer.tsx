@@ -26,8 +26,8 @@ import type {
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-function AutoTextarea({ value, onChange, className = "", placeholder = "", mono = false }: {
-  value: string; onChange: (v: string) => void; className?: string; placeholder?: string; mono?: boolean;
+function AutoTextarea({ value, onChange, onBlur, className = "", placeholder = "", mono = false }: {
+  value: string; onChange: (v: string) => void; onBlur?: () => void; className?: string; placeholder?: string; mono?: boolean;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const resize = () => { const el = ref.current; if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; } };
@@ -37,7 +37,7 @@ function AutoTextarea({ value, onChange, className = "", placeholder = "", mono 
       ref={ref} rows={1}
       className={`edit-ta${mono ? " mono" : ""}${className ? " " + className : ""}`}
       placeholder={placeholder} value={value || ""}
-      onChange={(e) => onChange(e.target.value)} onInput={resize}
+      onChange={(e) => onChange(e.target.value)} onInput={resize} onBlur={onBlur}
     />
   );
 }
