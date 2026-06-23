@@ -24,12 +24,20 @@ interface PaletteProps {
 export function Palette({ open, onClose, onJump, onRunCmd }: PaletteProps) {
   const [q, setQ] = useState("");
   const [active, setActive] = useState(0);
+  const [prevOpen, setPrevOpen] = useState(open);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  // reset the query/selection whenever the palette transitions to open
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open) {
       setQ("");
       setActive(0);
+    }
+  }
+
+  useEffect(() => {
+    if (open) {
       setTimeout(() => inputRef.current?.focus(), 30);
     }
   }, [open]);

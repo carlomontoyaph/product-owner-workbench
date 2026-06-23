@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Icon } from "@/components/Shared/Icons";
 import { JsonView } from "@/components/Shared/JsonView";
 import { Meter } from "@/components/Shared/Meter";
@@ -53,9 +53,12 @@ function ReadinessSignals({ data }: { data: ReadinessData }) {
 
 export function Inspector({ stage, status, data, onRun, preserve, onTogglePreserve }: InspectorProps) {
   const [showJson, setShowJson] = useState(false);
-  useEffect(() => {
+  const [prevStageId, setPrevStageId] = useState(stage.id);
+  // collapse the JSON view whenever the selected stage changes
+  if (stage.id !== prevStageId) {
+    setPrevStageId(stage.id);
     setShowJson(false);
-  }, [stage.id]);
+  }
 
   const produced = status === "review" || status === "done";
   const isInbox = stage.kind === "inbox";

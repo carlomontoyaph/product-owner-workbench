@@ -57,11 +57,16 @@ function loadState(): WorkbenchState {
 export function useWorkbench() {
   const [st, setSt] = useState<WorkbenchState>(defaultState);
   const stRef = useRef(st);
-  stRef.current = st;
+  // keep the latest state available to callbacks without re-creating them
+  useEffect(() => {
+    stRef.current = st;
+  });
 
-  // hydrate from localStorage after mount
+  // hydrate from localStorage after mount (intentional one-time setState in an
+  // effect — reading localStorage during render would cause an SSR mismatch)
   useEffect(() => {
     const saved = loadState();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSt(saved);
   }, []);
 
@@ -107,12 +112,17 @@ export function useWorkbench() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ stageId: id, liveAiEnabled: true, context: ctx }),
         });
-        const json = await res.json();
+        const json = (await res.json()) as {
+          success?: boolean;
+          data?: StageData;
+          error?: string;
+        };
         if (json.success && json.data) {
+          const incoming = json.data;
           setSt((p) => {
             const merged = p.preserve
-              ? mergeStageData(stage.kind, p.data[id], json.data)
-              : json.data;
+              ? mergeStageData(stage.kind, p.data[id], incoming)
+              : incoming;
             const next: WorkbenchState = {
               ...p,
               status: { ...p.status, [id]: "review" },
