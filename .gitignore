@@ -17,6 +17,11 @@
 /.next/
 /out/
 
+# cloudflare / opennext
+/.open-next/
+/.wrangler/
+.dev.vars
+
 # production
 /build
 
@@ -43,3 +48,5 @@ next-env.d.ts
 
 # archived files
 /archive
+
+/.idea
