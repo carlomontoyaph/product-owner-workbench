@@ -251,6 +251,57 @@ For teams using Kubernetes, Docker Swarm, or containerized CI/CD.
 
 ---
 
+## Path D: Cloudflare Workers (CI/CD via GitHub Actions)
+
+Best for: Automated, git-driven deploys to Cloudflare's edge network with zero servers to manage.
+
+This app deploys to **Cloudflare Workers** (not Pages) using the
+[`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare) adapter, which runs the Next.js
+Node.js runtime — including the OpenAI API routes and their streamed responses — on Workers via the
+`nodejs_compat` flag.
+
+The repo already contains everything needed:
+- `wrangler.jsonc` — Worker config (`nodejs_compat`, assets binding)
+- `open-next.config.ts` — adapter config
+- `.github/workflows/deploy.yml` — deploys on every push to `master` (+ manual run via
+  *Actions → Run workflow*), gated by `npm run lint` and the OpenNext build
+- `npm run deploy` / `npm run preview` scripts
+
+### One-time setup
+
+1. **Cloudflare API token** — create a token with the *Edit Cloudflare Workers* permission
+   (Cloudflare dashboard → My Profile → API Tokens). In GitHub:
+   *Settings → Secrets and variables → Actions → New repository secret* →
+   name `CLOUDFLARE_API_TOKEN`.
+
+2. **Cloudflare Account ID** — from the Workers & Pages overview page. Add as GitHub secret
+   `CLOUDFLARE_ACCOUNT_ID`.
+
+3. **OpenAI key as a Worker secret** (kept out of GitHub — set once, persists on the Worker):
+   ```bash
+   npx wrangler secret put OPENAI_API_KEY
+   # paste your key when prompted
+   ```
+   The Worker must exist first. If this is a brand-new project, let the GitHub Action deploy once
+   (the health check will report `apiKey: false`), then run the command above and re-deploy.
+
+4. **(Optional) Local preview** — create `.dev.vars` with `OPENAI_API_KEY=sk-...` and run
+   `npm run preview` to exercise the actual Worker build locally at `http://localhost:8787`.
+
+### Deploy
+
+Push to `master` (or trigger the workflow manually). The Action lints, builds with OpenNext, and
+deploys. Subsequent pushes redeploy automatically.
+
+### Verify
+
+```bash
+curl https://po-workbench.<your-subdomain>.workers.dev/api/health
+# Expected: { "ok": true, "apiKey": true }
+```
+
+---
+
 ## Monitoring & Logs
 
 ### Health Check Endpoint

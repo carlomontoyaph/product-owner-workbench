@@ -12,7 +12,7 @@ export async function POST(
 ) {
   const { name: stageKind } = await params;
   try {
-    const { data } = await req.json();
+    const { data } = (await req.json()) as { data: unknown };
 
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json({ confidence: 85, improvementTips: [] });

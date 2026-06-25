@@ -138,8 +138,14 @@ function HelpChips({ items, icon }: { items: string[]; icon?: string }) {
 function RunningView({ stage, live }: { stage: StageMetadata; live: boolean }) {
   const steps = RUN_STEPS[stage.id] || ["Running skill"];
   const [activeStep, setActiveStep] = useState(0);
-  useEffect(() => {
+  const runKey = `${stage.id}:${steps.length}`;
+  const [prevRunKey, setPrevRunKey] = useState(runKey);
+  // restart the step animation whenever the stage (or its step list) changes
+  if (runKey !== prevRunKey) {
+    setPrevRunKey(runKey);
     setActiveStep(0);
+  }
+  useEffect(() => {
     const t = setInterval(() => setActiveStep((a) => Math.min(a + 1, steps.length)), 460);
     return () => clearInterval(t);
   }, [stage.id, steps.length]);
@@ -428,7 +434,7 @@ export function StageRenderer(props: StageRendererProps) {
               ? <ListEditor items={rd.openQuestions ?? []} setItems={(a) => setField("openQuestions", a)} addLabel="Add open question" qStyle />
               : <>
                   <ItemList items={rd.openQuestions ?? []} qStyle />
-                  <div className="hint-row"><Icon name="compass" size={13} /><span>You don't answer these here. The <strong>Discovery</strong> step turns each open question into a clarifying question you'll answer — and the pipeline can't continue until they're all answered.</span></div>
+                  <div className="hint-row"><Icon name="compass" size={13} /><span>You don&apos;t answer these here. The <strong>Discovery</strong> step turns each open question into a clarifying question you&apos;ll answer — and the pipeline can&apos;t continue until they&apos;re all answered.</span></div>
                 </>}
           </div>
         </div>
