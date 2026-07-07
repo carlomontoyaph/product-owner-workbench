@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { Icon } from "@/components/Shared/Icons";
-import type { DebugLogRecord } from "@/app/api/debug/logs/route";
+import type { DebugLogRecord, DebugLogsResponse } from "@/app/api/debug/logs/route";
 
 export function DebugPanel() {
   const [isOpen, setIsOpen] = useState(false);
@@ -29,7 +29,7 @@ export function DebugPanel() {
           filterReason: filterReason || undefined,
         }),
       });
-      const data = await res.json();
+      const data = (await res.json()) as DebugLogsResponse;
       setLogs(data.logs || []);
       setHasMore(data.hasMore);
       setTotalCount(data.totalCount);

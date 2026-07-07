@@ -65,7 +65,7 @@ async function extractInsights(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fileName, content, liveAiEnabled: true }),
     });
-    const json = await res.json();
+    const json = (await res.json()) as { success?: boolean; cards?: Array<{ category: string; title: string; insight: string }>; error?: string };
     if (json.success && json.cards) {
       return { cards: json.cards };
     }
