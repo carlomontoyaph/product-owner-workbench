@@ -5,6 +5,7 @@ import type {
   UserStoryData,
   AcData,
   ReadinessData,
+  SignoffData,
   StageData,
 } from "./types";
 import type { StageId } from "./types";
@@ -94,6 +95,7 @@ export function buildAndDownloadPdf(
   const story = (all["user-story"] as UserStoryData) ?? {};
   const ac = (all["acceptance-criteria"] as AcData) ?? {};
   const r = (all.readiness as ReadinessData) ?? {};
+  const signoff = (all.signoff as SignoffData) ?? null;
 
   let y = 15;
 
@@ -136,6 +138,74 @@ export function buildAndDownloadPdf(
     for (const rec of r.recommendations ?? []) {
       y = checkPageBreak(doc, y, 15);
       y = addBullet(doc, rec, y, 0);
+    }
+  }
+
+  // Sign-off section
+  if (signoff) {
+    const { reviewers, approvers } = signoff;
+    const hasReviewers =
+      (reviewers?.inCall?.length ?? 0) > 0 || (reviewers?.offline?.length ?? 0) > 0;
+    const hasApprovers =
+      (approvers?.inCall?.length ?? 0) > 0 || (approvers?.offline?.length ?? 0) > 0;
+
+    if (hasReviewers || hasApprovers) {
+      y = checkPageBreak(doc, y, 15);
+      y += 3;
+      y = addRule(doc, y);
+
+      y = checkPageBreak(doc, y, 15);
+      y = addHeading(doc, "SIGN-OFF", y);
+      y += 2;
+
+      if (hasReviewers) {
+        y = checkPageBreak(doc, y, 15);
+        y = addSubheading(doc, "Reviewers", y);
+        if ((reviewers?.inCall ?? []).length > 0) {
+          y = checkPageBreak(doc, y, 15);
+          const callTime =
+            reviewers?.callStartedAt ||
+            new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" });
+          y = addBody(doc, `In the call (${callTime}):`, y, 0);
+          for (const p of reviewers.inCall) {
+            y = checkPageBreak(doc, y, 15);
+            y = addBullet(doc, p.name, y, 2);
+          }
+        }
+        if ((reviewers?.offline ?? []).length > 0) {
+          y = checkPageBreak(doc, y, 15);
+          y = addBody(doc, "Offline:", y, 0);
+          for (const p of reviewers.offline) {
+            y = checkPageBreak(doc, y, 15);
+            y = addBody(doc, `${p.name} — Date reviewed: ________`, y, 2);
+          }
+        }
+        y += 2;
+      }
+
+      if (hasApprovers) {
+        y = checkPageBreak(doc, y, 15);
+        y = addSubheading(doc, "Approvers", y);
+        if ((approvers?.inCall ?? []).length > 0) {
+          y = checkPageBreak(doc, y, 15);
+          const callTime =
+            approvers?.callStartedAt ||
+            new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" });
+          y = addBody(doc, `In the call (${callTime}):`, y, 0);
+          for (const p of approvers.inCall) {
+            y = checkPageBreak(doc, y, 15);
+            y = addBullet(doc, p.name, y, 2);
+          }
+        }
+        if ((approvers?.offline ?? []).length > 0) {
+          y = checkPageBreak(doc, y, 15);
+          y = addBody(doc, "Offline:", y, 0);
+          for (const p of approvers.offline) {
+            y = checkPageBreak(doc, y, 15);
+            y = addBody(doc, `${p.name} — Date approved: ________`, y, 2);
+          }
+        }
+      }
     }
   }
 

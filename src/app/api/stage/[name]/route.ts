@@ -4,6 +4,8 @@ import { getPrompt, getPerStoryAcPrompt } from "@/lib/prompts";
 import { parseJSON } from "@/lib/json-parser";
 import { normalizeStage } from "@/lib/normalizers";
 import { getMock } from "@/lib/mocks";
+import { logAiFailure } from "@/lib/ai-debug";
+import { withRetry, RetryableError } from "@/lib/ai-retry";
 import type { StageId, StageContext, UserStoryData } from "@/lib/types";
 
 const MODEL = "gpt-4o";
@@ -85,7 +87,8 @@ export async function POST(
             normal: arr(parsed.normal),
             abnormal: arr(parsed.abnormal),
           });
-        } catch {
+        } catch (err) {
+          logAiFailure({ route: "stage", stageKind: `${stageKind}:ac-story`, model: MODEL, err });
           rows.push({ story: { as: s.as, want: s.want, so: s.so }, normal: [], abnormal: [] });
         }
       }
@@ -99,17 +102,28 @@ export async function POST(
       return NextResponse.json({ success: false, error: `no-prompt-for-${stageKind}` }, { status: 400 });
     }
 
-    const txt = await complete(client, prompt);
+    const txt = await withRetry(() => complete(client, prompt), {
+      route: "stage",
+      model: MODEL,
+    });
     const parsed = parseJSON(txt);
     const data = normalizeStage(stageKind, parsed);
 
     return NextResponse.json({ success: true, data });
   } catch (err) {
-    console.error("[/api/stage]", stageKind, err);
+    const retryCount = err instanceof RetryableError ? err.retryCount : undefined;
+    const originalErr = err instanceof RetryableError ? err.originalError : err;
+    const classification = logAiFailure({
+      route: "stage",
+      stageKind,
+      model: MODEL,
+      err: originalErr,
+      retryCount,
+    });
     return NextResponse.json({
       success: true,
       data: getMock(stageKind as StageId),
-      error: String(err),
+      error: classification.label,
     });
   }
 }

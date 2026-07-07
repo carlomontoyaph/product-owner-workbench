@@ -1,5 +1,6 @@
 "use client";
 import { Icon } from "@/components/Shared/Icons";
+import { DebugPanel } from "./DebugPanel";
 
 interface TopBarProps {
   epicTitle: string;
@@ -63,6 +64,8 @@ export function TopBar({ epicTitle, elapsedStr, live, onToggleLive, onCommand, o
         <button className="btn ghost sm" onClick={onCopilot} title="Open Copilot">
           <Icon name="sparkles" size={14} />Copilot
         </button>
+
+        <DebugPanel />
 
         <button
           className={`btn${exportReachable ? " primary" : " ghost"} sm`}

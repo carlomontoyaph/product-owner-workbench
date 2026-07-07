@@ -1,4 +1,4 @@
-import type { WorkbenchState } from "@/lib/types";
+import type { WorkbenchState, SignoffData } from "@/lib/types";
 
 export interface WorkbenchSaveFile {
   version: "1";
@@ -44,6 +44,26 @@ export function deserializeSession(raw: string): WorkbenchState {
   if (state.live === undefined) state.live = true;
   if (state.preserve === undefined) state.preserve = true;
   if (!state.copilotMessages) state.copilotMessages = [];
+
+  // Migrate: insert signoff status/data for pre-signoff saved sessions
+  if (state.status.signoff === undefined) {
+    if (state.status.export !== "locked") {
+      state.status.signoff = "review";
+      state.status.export = "locked";
+      state.frozen = false;
+      if (state.current === "export") state.current = "signoff";
+    } else {
+      state.status.signoff = "locked";
+    }
+  }
+  if (!state.data.signoff) state.data.signoff = {} as SignoffData;
+
+  // Migrate: convert freeText → inputs.free for inbox data
+  const oldInbox = state.data.inbox as { freeText?: string } | undefined;
+  if (oldInbox && !("inputs" in oldInbox)) {
+    state.data.inbox = { inputs: { free: oldInbox.freeText ?? "" }, sources: [], cards: [] };
+  }
+  if (!state.data.inbox) state.data.inbox = { inputs: {}, sources: [], cards: [] };
 
   return state;
 }

@@ -55,7 +55,7 @@ export function Workbench() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ data: currentData }),
         });
-        const json = (await res.json()) as { confidence?: number; improvementTips?: string[] };
+        const json = (await res.json()) as { confidence?: number; improvementTips?: string[]; error?: string };
         if (typeof json.confidence === "number") {
           wb.updateData(
             stageId,
@@ -68,8 +68,11 @@ export function Workbench() {
             true
           );
         }
-      } catch {
-        /* silently ignore */
+        if (json.error) {
+          console.warn("[WB] confidence recalculation degraded:", json.error);
+        }
+      } catch (err) {
+        console.warn("[WB] confidence fetch failed:", err);
       }
     },
     [st.live, st.data, wb]
@@ -121,7 +124,26 @@ export function Workbench() {
   const handleExport = useCallback(
     async (target: { id: string; name: string }) => {
       if (target.id === "md") {
-        wb.goTo("export", showToast);
+        try {
+          const { buildMarkdown } = await import("@/lib/markdown-builder");
+          const md = buildMarkdown(st.data);
+          const blob = new Blob([md], { type: "text/markdown" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          const epicData = st.data.epic as { title?: string } | undefined;
+          const slug = epicData?.title
+            ? epicData.title.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "")
+            : "po-workbench-artifact";
+          a.href = url;
+          a.download = `${slug}.md`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          showToast("Markdown downloaded", "download");
+        } catch {
+          showToast("Markdown export failed", "alert");
+        }
         return;
       }
       if (target.id === "pdf") {
@@ -167,9 +189,10 @@ export function Workbench() {
   );
 
   const currentStatus = st.status[st.current];
-  const canConfirm = currentStatus === "review";
-  const canEdit = currentStatus === "review" || currentStatus === "done";
-  const canRerun = currentStatus === "review" || currentStatus === "done";
+  const isSignoffKind = stage.kind === "signoff";
+  const canConfirm = !isSignoffKind && currentStatus === "review";
+  const canEdit = !isSignoffKind && (currentStatus === "review" || currentStatus === "done");
+  const canRerun = !isSignoffKind && (currentStatus === "review" || currentStatus === "done");
 
   return (
     <div className="wb">
@@ -227,6 +250,16 @@ export function Workbench() {
               {canConfirm && !editing && (
                 <button className="btn primary sm" onClick={handleConfirm} title="Confirm and advance to the next stage">
                   Confirm →
+                </button>
+              )}
+              {isSignoffKind && currentStatus !== "done" && (
+                <button className="btn primary sm" onClick={handleConfirm} title="Confirm and advance to export">
+                  Confirm &amp; continue →
+                </button>
+              )}
+              {isSignoffKind && currentStatus === "done" && (
+                <button className="btn ghost sm" onClick={() => wb.goTo("export", showToast)} title="Go to export">
+                  Go to export →
                 </button>
               )}
             </div>
