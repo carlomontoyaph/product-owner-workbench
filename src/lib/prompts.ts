@@ -1,6 +1,16 @@
-import type { StageContext } from "./types";
+import type { StageContext, ContextCard } from "./types";
 
 const J = (o: unknown) => JSON.stringify(o ?? null);
+
+function contextBlock(cards: ContextCard[] | undefined): string {
+  if (!cards?.length) return "";
+  const lines = cards.flatMap((c) => c.insights.map((i) => `- [${c.label}] ${i.title}: ${i.insight}`));
+  if (!lines.length) return "";
+  return (
+    "\n\nSupporting context extracted from uploaded files (may include feedback, evidence, risks, constraints — use to sharpen accuracy; the note above is still the primary signal):\n" +
+    lines.join("\n")
+  );
+}
 
 export function getPrompt(stageKind: string, ctx: StageContext): string | null {
   const input = ctx.input ?? "";
@@ -15,7 +25,7 @@ Extract the underlying business need. If the note is vague, infer reasonable, sp
 List 5-7 distinct desired outcomes. Include both qualitative goals and measurable success criteria (with targets and timelines where possible) all in the same outcomes array — do not create a separate metrics section.
 Rate your confidence (0-100) based on clarity and completeness of the input. Provide up to 3 tips describing what was missing or ambiguous in the user's input that would improve this confidence.
 Respond with ONLY minified JSON, no markdown, exactly this shape:
-{"businessProblem":"1-2 sentences","outcomes":["5-7 distinct desired outcomes and measurable success criteria"],"confidence":<0-100 integer>,"improvementTips":["tip 1","tip 2","tip 3"]}`;
+{"businessProblem":"1-2 sentences","outcomes":["5-7 distinct desired outcomes and measurable success criteria"],"confidence":<0-100 integer>,"improvementTips":["tip 1","tip 2","tip 3"]}${contextBlock(ctx.contextCards)}`;
 
     case "requirement":
       return `You are a product manager. Original note:
@@ -24,7 +34,7 @@ Business need (already extracted): ${J(ctx.need)}
 Decompose this into a structured requirement analysis. Open questions must be things genuinely still unresolved.
 Rate your confidence (0-100) based on clarity and completeness of the input. Provide up to 3 tips describing what was missing or ambiguous in the user's input that would improve this confidence.
 Respond with ONLY minified JSON:
-{"users":["3-4 user types"],"goals":["3 goals"],"assumptions":["3 assumptions"],"constraints":["3 constraints"],"openQuestions":["3 unresolved questions"],"confidence":<0-100 integer>,"improvementTips":["tip 1","tip 2","tip 3"]}`;
+{"users":["3-4 user types"],"goals":["3 goals"],"assumptions":["3 assumptions"],"constraints":["3 constraints"],"openQuestions":["3 unresolved questions"],"confidence":<0-100 integer>,"improvementTips":["tip 1","tip 2","tip 3"]}${contextBlock(ctx.contextCards)}`;
 
     case "discovery":
       return `You are a product manager running discovery to remove ambiguity from a vague requirement before it can be built.
@@ -34,9 +44,10 @@ Write 3-5 clarifying questions that, once answered, remove critical ambiguity an
 - "why": 1-2 sentences explaining why the answer matters for writing a clear, complete backlog item
 - "examples": 2-4 concrete example answers (not a forced choice — just to illustrate useful input that would help you write this backlog item)
 Set "origin":"open" if it resolves one of the open questions above, otherwise "edge".
+Do not ask about anything already answered in the supporting context below.
 Rate your confidence (0-100) based on clarity and completeness of the input. Provide up to 3 tips describing what was missing or ambiguous in the user's input that would improve this confidence.
 Respond with ONLY minified JSON:
-{"questions":[{"q":"the question","why":"why this matters for the backlog","examples":["example 1","example 2"],"origin":"open"}],"confidence":<0-100 integer>,"improvementTips":["tip 1","tip 2","tip 3"]}`;
+{"questions":[{"q":"the question","why":"why this matters for the backlog","examples":["example 1","example 2"],"origin":"open"}],"confidence":<0-100 integer>,"improvementTips":["tip 1","tip 2","tip 3"]}${contextBlock(ctx.contextCards)}`;
 
     case "epic":
       return `You are a product manager. Turn the clarified requirement into a single epic.
@@ -45,7 +56,7 @@ Business need: ${J(ctx.need)}
 Discovery answers: ${J(ctx.discovery?.answers)}
 Rate your confidence (0-100) based on clarity and completeness of the input. Provide up to 3 tips describing what was missing or ambiguous in the user's input that would improve this confidence.
 Respond with ONLY minified JSON:
-{"title":"short epic title","description":"2-3 sentence description","subFeatures":["4-6 sub-features, each as an active verb phrase: '<Verb> <business object> <business outcome>' (e.g. 'Analyze CRM notes to identify opportunities', 'Detect at-risk accounts from customer interactions')"],"confidence":<0-100 integer>,"improvementTips":["tip 1","tip 2","tip 3"]}`;
+{"title":"short epic title","description":"2-3 sentence description","subFeatures":["4-6 sub-features, each as an active verb phrase: '<Verb> <business object> <business outcome>' (e.g. 'Analyze CRM notes to identify opportunities', 'Detect at-risk accounts from customer interactions')"],"confidence":<0-100 integer>,"improvementTips":["tip 1","tip 2","tip 3"]}${contextBlock(ctx.contextCards)}`;
 
     case "story": {
       const features = ctx.epic?.subFeatures ?? [];
@@ -58,6 +69,7 @@ ${featureList}
 Epic context: ${J(ctx.epic)}
 Discovery answers: ${J(ctx.discovery?.answers)}
 Each field is a SHORT phrase and must NOT include the words "As a", "I want", or "So that".
+For the "so" field: write a complete benefit statement with a clear subject (e.g., "the FAQ is more discoverable" or "we understand its impact" or "its content improves"), NOT an incomplete action verb.
 Rate your confidence (0-100) based on clarity and completeness of the input. Provide up to 3 tips describing what was missing or ambiguous in the user's input that would improve this confidence.
 Respond with ONLY minified JSON:
 {"stories":[{"as":"user role","want":"capability","so":"benefit"}],"confidence":<0-100 integer>,"improvementTips":["tip 1","tip 2","tip 3"]}`;
@@ -70,7 +82,7 @@ Stories: ${J(ctx.story?.stories)}
 Acceptance criteria cover ${ctx.ac?.rows?.length ?? 0} stories.
 Rate your confidence (0-100) based on clarity and completeness of the input. Provide up to 3 tips describing what was missing or ambiguous in the user's input that would improve this confidence.
 Respond with ONLY minified JSON:
-{"refinementScore":<0-100 integer>,"recommendations":["3 refinement recommendations"],"dependencies":{"internal":["1-2"],"external":["1-2"]},"risk":{"level":"Low|Medium|High","reasons":["2-3 reasons"]},"estimate":{"points":<integer story points>,"rationale":"short rationale"},"confidence":<0-100 integer>,"improvementTips":["tip 1","tip 2","tip 3"]}`;
+{"refinementScore":<0-100 integer>,"recommendations":["3 refinement recommendations"],"dependencies":{"internal":["1-2"],"external":["1-2"]},"risk":{"level":"Low|Medium|High","reasons":["2-3 reasons"]},"estimate":{"points":<integer story points>,"rationale":"short rationale"},"confidence":<0-100 integer>,"improvementTips":["tip 1","tip 2","tip 3"]}${contextBlock(ctx.contextCards?.filter((c) => c.catKey === "risk" || c.catKey === "constraint"))}`;
 
     default:
       return null;

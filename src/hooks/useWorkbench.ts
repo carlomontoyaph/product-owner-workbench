@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
-import type { WorkbenchState, StageId, StageData, StageStatus } from "@/lib/types";
+import type { WorkbenchState, StageId, StageData, StageStatus, SignoffData } from "@/lib/types";
 import { STAGES, STAGE_IDS, AI_STAGES, stageIndex, nextStageId } from "@/lib/stages";
 import { SOURCES } from "@/lib/mocks";
 import { buildContext } from "@/lib/context-builder";
@@ -43,6 +43,27 @@ function loadState(): WorkbenchState {
         if (s.live === undefined) s.live = true;
         if (s.preserve === undefined) s.preserve = true;
         if (!s.copilotMessages) s.copilotMessages = [];
+
+        // Migrate: insert signoff status/data for pre-signoff saved sessions
+        if (s.status.signoff === undefined) {
+          if (s.status.export !== "locked") {
+            s.status.signoff = "review";
+            s.status.export = "locked";
+            s.frozen = false;
+            if (s.current === "export") s.current = "signoff";
+          } else {
+            s.status.signoff = "locked";
+          }
+        }
+        if (!s.data.signoff) s.data.signoff = {} as SignoffData;
+
+        // Migrate: convert freeText → inputs.free for inbox data
+        const oldInbox = s.data.inbox as { freeText?: string } | undefined;
+        if (oldInbox && !("inputs" in oldInbox)) {
+          s.data.inbox = { inputs: { free: oldInbox.freeText ?? "" }, sources: [], cards: [] };
+        }
+        if (!s.data.inbox) s.data.inbox = { inputs: {}, sources: [], cards: [] };
+
         return s;
       }
     }
@@ -131,6 +152,9 @@ export function useWorkbench() {
             if (id === "discovery") next.answers = {};
             return next;
           });
+          if (json.error) {
+            onToast?.(`AI unavailable — showing sample output (${json.error})`, "alert");
+          }
         } else {
           throw new Error(json.error ?? "api-error");
         }
@@ -154,6 +178,10 @@ export function useWorkbench() {
       setSt((p) => {
         const status = { ...p.status, [id]: "done" as const };
         if (!nextId) return { ...p, status };
+        if (nextId === "signoff") {
+          status.signoff = "review";
+          return { ...p, status, current: "signoff" };
+        }
         if (nextId === "export") {
           status.export = "ready";
           return { ...p, status, current: "export", frozen: true };
@@ -161,8 +189,11 @@ export function useWorkbench() {
         return { ...p, status };
       });
 
-      if (nextId && nextId !== "export") {
+      if (nextId && nextId !== "export" && nextId !== "signoff") {
         await runStage(nextId, onToast);
+      }
+      if (nextId === "signoff") {
+        onToast?.("Record reviewers & approvers", "check");
       }
       if (nextId === "export") {
         onToast?.("Sprint-ready artifact assembled", "rocket");

@@ -9,4 +9,12 @@ if git diff --cached --name-only | grep -E "^\.env\.local$" >/dev/null; then
   exit 1
 fi
 
+# Check for secret-looking strings in staged diffs (OpenAI, Stripe, etc.)
+if git diff --cached | grep -E "sk_live_|sk_test_|sk-proj-[a-zA-Z0-9]{20,}" >/dev/null; then
+  echo "❌ ERROR: Detected secret-like patterns in staged changes!"
+  echo "   Found what looks like an API key (sk_live_, sk_test_, or sk-proj-...)"
+  echo "   Review your changes before committing"
+  exit 1
+fi
+
 exit 0

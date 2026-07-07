@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { getConfidenceOnlyPrompt } from "@/lib/prompts";
 import { parseJSON } from "@/lib/json-parser";
+import { logAiFailure } from "@/lib/ai-debug";
 
 const MODEL = "gpt-4o";
 const MAX_TOKENS = 512;
@@ -38,7 +39,8 @@ export async function POST(
       confidence: Math.max(0, Math.min(100, Number(parsed.confidence) || 85)),
       improvementTips: arr(parsed.improvementTips).slice(0, 3),
     });
-  } catch {
-    return NextResponse.json({ confidence: 85, improvementTips: [] });
+  } catch (err) {
+    const classification = logAiFailure({ route: "confidence", stageKind, model: MODEL, err });
+    return NextResponse.json({ confidence: 85, improvementTips: [], error: classification.label });
   }
 }

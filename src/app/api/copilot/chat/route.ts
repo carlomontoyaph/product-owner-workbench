@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import OpenAI from "openai";
 import { getCopilotSystemPrompt } from "@/lib/prompts";
 import { getStage } from "@/lib/stages";
+import { logAiFailure } from "@/lib/ai-debug";
 import type { StageId } from "@/lib/types";
 
 function getClient() {
@@ -58,7 +59,8 @@ export async function POST(req: NextRequest) {
         }
         controller.enqueue(encode({ done: true }));
       } catch (err) {
-        controller.enqueue(encode({ content: `\n\nError: ${String(err)}` }));
+        const classification = logAiFailure({ route: "copilot", model: "gpt-4o", err });
+        controller.enqueue(encode({ content: `\n\nError: ${classification.label}` }));
       } finally {
         controller.close();
       }

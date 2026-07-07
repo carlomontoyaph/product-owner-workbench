@@ -278,6 +278,8 @@ export const SOURCES = [
     label: "Slack",
     icon: "slack",
     meta: "#product-feedback · 4 messages",
+    hint: "Paste the Slack thread — messages, names and timestamps are fine.",
+    placeholder: "Paste the raw Slack messages…",
     text: `@here can we PLEASE add Google login? half the support tickets this week are password resets 😩\nSomeone in the enterprise pilot also asked for "sign in with my work account".\n+1 — Apple login on iPhone would be nice too\ndo we know if security is ok with this?`,
   },
   {
@@ -285,6 +287,8 @@ export const SOURCES = [
     label: "Email",
     icon: "mail",
     meta: "From: Vice President, Sales · Re: pilot drop-off",
+    hint: "Paste the email — sender, subject and body.",
+    placeholder: "Paste the email thread…",
     text: `Two enterprise prospects stalled at sign-up this week. Both said they "expected to just use their work Google account."\nThis is now the #1 friction point I'm hearing in demos. Can we prioritize for next quarter?`,
   },
   {
@@ -292,6 +296,8 @@ export const SOURCES = [
     label: "Meeting notes",
     icon: "notes",
     meta: "Onboarding sync · 12 Jun",
+    hint: "Paste your raw meeting notes.",
+    placeholder: "Paste meeting notes…",
     text: `- Onboarding funnel: 38% drop at account creation\n- Hypothesis: friction from "yet another password"\n- Consider social login / single sign-on (SSO)\n- Security flagged account-takeover concerns\n- Open: which providers, and how do we handle existing accounts?`,
   },
   {
@@ -299,6 +305,8 @@ export const SOURCES = [
     label: "Transcript",
     icon: "transcript",
     meta: "Discovery call · auto-captured",
+    hint: "Paste the call transcript.",
+    placeholder: "Paste the call transcript…",
     text: `"...basically people don't want another password. If we let them sign in with Google or Apple, we think activation goes up.\nWe're not sure about Microsoft yet. And compliance asked what data we'd actually pull from these providers..."`,
   },
   {
@@ -306,6 +314,8 @@ export const SOURCES = [
     label: "Free text",
     icon: "text",
     meta: "Typed into intake · you",
+    hint: "Describe the request in your own words.",
+    placeholder: "Type or paste the raw stakeholder request…",
     text: "",
   },
 ];

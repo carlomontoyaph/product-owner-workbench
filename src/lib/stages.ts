@@ -21,10 +21,10 @@ export const STAGES: StageMetadata[] = [
     name: "Requirement Inbox",
     skill: "—",
     title: "Requirement Inbox",
-    desc: "Drop raw stakeholder input — free text, meeting notes, Slack, email, or transcripts. Nothing is structured yet; this is the messy starting point.",
+    desc: "Drop raw stakeholder input — free text, meeting notes, Slack, email, or transcripts. Add supporting context by uploading files for AI extraction. Nothing is structured yet; this is the messy starting point.",
     skillName: "intake",
-    purpose: "Capture unstructured stakeholder signal from any channel as the single source for the pipeline.",
-    io: { in: "Raw text from any channel", out: "Normalized requirement intake" },
+    purpose: "Capture unstructured stakeholder signal from any channel plus extracted context from supporting files, as the single source for the pipeline.",
+    io: { in: "Raw text from any channel · optional supporting files", out: "Normalized intake + context_cards[]" },
     runLabel: "Analyze requirement",
     confirmLabel: "Confirm input · Analyze",
   },
@@ -37,7 +37,7 @@ export const STAGES: StageMetadata[] = [
     desc: "The underlying problem, the outcome we want, and how we'll know it worked — extracted from the raw input.",
     skillName: "business-need-analyzer",
     purpose: "Extract the business problem and desired outcomes (including measurable success criteria) from a stakeholder statement.",
-    io: { in: "Stakeholder statement", out: "businessProblem · outcomes[]" },
+    io: { in: "Stakeholder statement + supporting context", out: "businessProblem · outcomes[]" },
   },
   {
     id: "requirement-analysis",
@@ -48,7 +48,7 @@ export const STAGES: StageMetadata[] = [
     desc: "The raw signal, decomposed into the structured dimensions a backlog needs: who, what, what we're assuming, what limits us, and what's still unknown.",
     skillName: "requirement-analyzer",
     purpose: "Convert raw requirements into structured users, goals, assumptions, constraints, and open questions.",
-    io: { in: "businessProblem + raw input", out: "users · goals · assumptions · constraints · openQuestions" },
+    io: { in: "businessProblem + raw input + supporting context", out: "users · goals · assumptions · constraints · openQuestions" },
   },
   {
     id: "discovery",
@@ -59,7 +59,7 @@ export const STAGES: StageMetadata[] = [
     desc: "The system asks only the questions it actually needs to remove ambiguity. Answer them here — each answer measurably sharpens everything downstream.",
     skillName: "discovery-question-generator",
     purpose: "Generate the missing information needed to make the requirement unambiguous: who, why, what, success, constraints, edge cases.",
-    io: { in: "Structured requirement", out: "questions[] (with answers)" },
+    io: { in: "Structured requirement + supporting context", out: "questions[] (with answers)" },
   },
   {
     id: "epic",
@@ -70,7 +70,7 @@ export const STAGES: StageMetadata[] = [
     desc: "The clarified need, grouped into a single initiative with its sub-features — the unit a team can plan around.",
     skillName: "epic-generator",
     purpose: "Group related work into a larger initiative with a clear title, description, and sub-features.",
-    io: { in: "Requirement + discovery answers", out: "title · description · subFeatures[]" },
+    io: { in: "Requirement + discovery answers + supporting context", out: "title · description · subFeatures[]" },
   },
   {
     id: "user-story",
@@ -103,7 +103,18 @@ export const STAGES: StageMetadata[] = [
     desc: "Four quality skills run as a check, not a gate: backlog refinement, dependencies, risk, and a suggested estimate. The team still owns the final call.",
     skillName: "sprint-readiness-checker",
     purpose: "Score story health, surface dependencies and risk, and suggest an estimate so a story can be judged sprint-ready.",
-    io: { in: "Story + acceptance criteria", out: "refinementScore · dependencies · risk · estimate · readiness" },
+    io: { in: "Story + acceptance criteria + supporting context", out: "refinementScore · dependencies · risk · estimate · readiness" },
+  },
+  {
+    id: "signoff",
+    kind: "signoff",
+    name: "Sign-off",
+    skill: "—",
+    title: "Sign-off",
+    desc: "Record who reviewed and who approved this artifact before it leaves the pipeline. In-call sign-offs share the call time; offline reviewers and approvers are dated by hand on the exported document.",
+    skillName: "sign-off",
+    purpose: "Capture reviewers and approvers, and the moment sign-off happened, so the exported artifact carries an accountable approval record.",
+    io: { in: "Refined, sprint-ready artifact", out: "reviewers[] · approvers[] · sign-off record" },
   },
   {
     id: "export",
@@ -111,10 +122,10 @@ export const STAGES: StageMetadata[] = [
     name: "Export",
     skill: "—",
     title: "Export Sprint-Ready Artifact",
-    desc: "The ambiguity is gone. Hand the structured, refined artifact to wherever the team works — as Markdown, or pushed into a tracker.",
+    desc: "The ambiguity is gone. Hand the structured, refined artifact to wherever the team works — as Markdown or a print-ready PDF.",
     skillName: "export",
-    purpose: "Serialize the full structured artifact to Markdown or push to an external tracker.",
-    io: { in: "Full structured artifact", out: "Markdown · Jira · Azure DevOps · Linear" },
+    purpose: "Serialize the full structured artifact to Markdown or PDF.",
+    io: { in: "Full structured artifact", out: "Markdown · PDF" },
   },
 ];
 
@@ -152,5 +163,5 @@ export const AI_STAGES = new Set<StageId>([
 
 export const EXPORT_TARGETS = [
   { id: "md", name: "Markdown", sub: "Copy or download .md", icon: "markdown" },
-  { id: "pdf", name: "PDF", sub: "Sprint artifact · copy-paste ready", icon: "download" },
+  { id: "pdf", name: "PDF", sub: "Download a print-ready PDF", icon: "transcript" },
 ];

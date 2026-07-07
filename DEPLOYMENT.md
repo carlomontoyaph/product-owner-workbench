@@ -2,6 +2,20 @@
 
 This app is a Next.js 16 application with a Node.js backend (required for API routes). Choose one deployment path below.
 
+## Security Note
+
+**This app has no built-in authentication.** All API routes are open and rely entirely on network-level access control. Before deploying to production:
+
+- **For Vercel:** Use [Vercel Password Protection](https://vercel.com/docs/concepts/projects/environment-variables/system-environment-variables#vercel_env_exposure_debug_ids), a VPN/proxy, or OAuth (via a third-party solution)
+- **For self-hosted:** Run behind a reverse proxy with auth (Nginx, HAProxy), a VPN gateway, or IP allowlist
+- **Do not** expose this app directly to the public internet without additional access control
+
+For internal teams only (e.g., 6 Product Owners behind corporate network), no additional auth is needed.
+
+## Debug Logs Note
+
+**The Debug Logs feature (panel in TopBar) requires a writable, persistent filesystem and does NOT work on Vercel.** The app writes error logs to `ai-debug.log` in the deployed directory; Vercel's serverless functions run on a read-only filesystem (only `/tmp` is writable, and it's ephemeral per-invocation). Debug log writes will silently fail, and the Debug Logs panel will always be empty. If you need this feature in production, use **Path B: Self-Hosted VPS** instead.
+
 ---
 
 ## Path A: Vercel (Recommended — Zero Config)
@@ -318,6 +332,14 @@ Expected response (API key configured):
 
 If `"apiKey": false`, the `OPENAI_API_KEY` env var is not set correctly.
 
+### Debug Logs (Self-Hosted Only)
+
+The app includes a **Debug Logs** panel in the TopBar (visible to all users) that shows AI API failures. This feature works **only on Path B (self-hosted VPS)**:
+- **Vercel:** Debug logs silently don't persist (read-only filesystem). The panel will always be empty.
+- **Self-Hosted:** Logs are written to `ai-debug.log` and persist across restarts (auto-rotated at 10 MB, keeps 5 copies).
+
+No configuration needed — the Debug Logs panel is always enabled.
+
 ### Error Tracking (Optional)
 
 To integrate Sentry error monitoring (for future production use):
@@ -339,6 +361,7 @@ To integrate Sentry error monitoring (for future production use):
 | "API key not configured" | `OPENAI_API_KEY` env var not set | Check `/api/health` → set `apiKey: true` before proceeding |
 | 502 Bad Gateway | App crashed or not running | Check PM2 logs: `pm2 logs po-workbench` |
 | Slow stage execution | OpenAI API rate limiting | Wait a few seconds, retry. Check OpenAI dashboard for usage. |
+| Debug Logs panel always empty | Deployed to Vercel (read-only filesystem) | Expected — use Path B (self-hosted) if you need persistent debug logs |
 | HTTPS cert warning | Self-signed or expired | Use Let's Encrypt (certbot) or Vercel's auto HTTPS |
 
 ---

@@ -7,6 +7,7 @@ export type StageId =
   | "user-story"
   | "acceptance-criteria"
   | "readiness"
+  | "signoff"
   | "export";
 
 // kind matches the prototype's stage.kind field
@@ -19,6 +20,7 @@ export type StageKind =
   | "story"
   | "ac"
   | "readiness"
+  | "signoff"
   | "export";
 
 export type StageStatus = "locked" | "ready" | "running" | "review" | "done";
@@ -99,8 +101,56 @@ export interface ReadinessData {
   improvementTips?: string[];
 }
 
+export interface SignoffPerson {
+  name: string;
+  where: "in-call" | "offline";
+  signedAt?: string;
+}
+
+export interface SignoffGroup {
+  inCall: SignoffPerson[];
+  offline: SignoffPerson[];
+  callStartedAt?: string;
+}
+
+export interface SignoffData {
+  reviewers: SignoffGroup;
+  approvers: SignoffGroup;
+}
+
+export type ContextCategory = "need" | "feedback" | "evidence" | "risk" | "constraint" | "custom";
+
+export interface ContextInsight {
+  id: string;
+  title: string;
+  insight: string;
+  source: string | null;
+}
+
+export interface ContextCard {
+  id: string;
+  label: string;
+  catKey: ContextCategory;
+  custom: boolean;
+  naming: boolean;
+  insights: ContextInsight[];
+  fresh?: boolean;
+}
+
+export type InboxSourceStatus = "processing" | "ok" | "empty" | "rejected" | "error";
+
+export interface InboxSourceRecord {
+  id: string;
+  name: string;
+  time: string;
+  status: InboxSourceStatus;
+  note?: string;
+}
+
 export interface InboxData {
-  freeText?: string;
+  inputs?: Record<string, string>;
+  sources?: InboxSourceRecord[];
+  cards?: ContextCard[];
 }
 
 export type StageData =
@@ -112,6 +162,7 @@ export type StageData =
   | UserStoryData
   | AcData
   | ReadinessData
+  | SignoffData
   | null;
 
 // ── copilot ───────────────────────────────────────────────────────────────────
@@ -143,6 +194,7 @@ export interface WorkbenchState {
 
 export interface StageContext {
   input: string;
+  contextCards?: ContextCard[];
   need?: BusinessNeedData | null;
   requirement?: RequirementData | null;
   discovery?: { questions: DiscoveryQuestion[]; answers: { q: string; a: string | null }[] } | null;
