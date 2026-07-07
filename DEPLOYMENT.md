@@ -2,6 +2,16 @@
 
 This app is a Next.js 16 application with a Node.js backend (required for API routes). Choose one deployment path below.
 
+## Security Note
+
+**This app has no built-in authentication.** All API routes are open and rely entirely on network-level access control. Before deploying to production:
+
+- **For Vercel:** Use [Vercel Password Protection](https://vercel.com/docs/concepts/projects/environment-variables/system-environment-variables#vercel_env_exposure_debug_ids), a VPN/proxy, or OAuth (via a third-party solution)
+- **For self-hosted:** Run behind a reverse proxy with auth (Nginx, HAProxy), a VPN gateway, or IP allowlist
+- **Do not** expose this app directly to the public internet without additional access control
+
+For internal teams only (e.g., 6 Product Owners behind corporate network), no additional auth is needed.
+
 ---
 
 ## Path A: Vercel (Recommended — Zero Config)

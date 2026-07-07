@@ -5,6 +5,8 @@ import { Badge } from "@/components/Shared/Badge";
 import { SecLabel } from "@/components/Shared/SecLabel";
 import { getExplanation } from "@/lib/glossary";
 import { buildMarkdown } from "@/lib/markdown-builder";
+import { SignoffView } from "./SignoffView";
+import { InboxView } from "./InboxView";
 import { EXPORT_TARGETS } from "@/lib/stages";
 import { SOURCES } from "@/lib/mocks";
 import { RUN_STEPS } from "@/utils/constants";
@@ -13,6 +15,7 @@ import type {
   StageStatus,
   StageData,
   StageId,
+  InboxData,
   BusinessNeedData,
   RequirementData,
   DiscoveryData,
@@ -20,6 +23,7 @@ import type {
   UserStoryData,
   AcData,
   ReadinessData,
+  SignoffData,
   WorkbenchState,
   Story,
 } from "@/lib/types";
@@ -62,20 +66,34 @@ function ListEditor({ items, setItems, addLabel = "Add item", qStyle = false, pl
 function ChipsEditor({ items, setItems, icon, addLabel = "Add" }: {
   items: string[]; setItems: (a: string[]) => void; icon?: string; addLabel?: string;
 }) {
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const focusIndexRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (focusIndexRef.current !== null) {
+      const idx = focusIndexRef.current;
+      focusIndexRef.current = null;
+      setTimeout(() => inputRefs.current[idx]?.focus(), 30);
+    }
+  });
+
   return (
     <div className="chips">
-      {items.map((t, i) => ({ t, i })).filter(({ t }) => t.trim()).map(({ t, i }) => (
+      {items.map((t, i) => ({ t, i })).map(({ t, i }) => (
         <span key={i} className="chip edit">
           {icon && <span className="ico"><Icon name={icon} size={12} /></span>}
           <input
-            className="chip-input" value={t} placeholder="…"
-            style={{ width: Math.max((t || "").length, 3) + "ch" }}
+            ref={(el) => { inputRefs.current[i] = el; }}
+            className={`chip-input${t.trim() ? "" : " empty"}`}
+            value={t}
+            placeholder="Name or role…"
+            style={{ width: Math.max((t || "").length, t.trim() ? 3 : 13) + "ch" }}
             onChange={(e) => { const a = items.slice(); a[i] = e.target.value; setItems(a); }}
           />
           <button className="chip-del" title="Remove" onClick={() => setItems(items.filter((_, j) => j !== i))}><Icon name="x" size={11} /></button>
         </span>
       ))}
-      <button className="chip-add" onClick={() => setItems([...items, ""])}><Icon name="plus" size={12} />{addLabel}</button>
+      <button className="chip-add" onClick={() => { focusIndexRef.current = items.length; setItems([...items, ""]); }}><Icon name="plus" size={12} />{addLabel}</button>
     </div>
   );
 }
@@ -114,12 +132,13 @@ function ItemList({ items, qStyle }: { items: string[]; qStyle?: boolean }) {
 
 function HelpChips({ items, icon }: { items: string[]; icon?: string }) {
   const [openIdx, setOpenIdx] = useState(-1);
-  const openText = openIdx >= 0 ? items[openIdx] : null;
+  const filtered = items.filter(t => t.trim());
+  const openText = openIdx >= 0 && openIdx < filtered.length ? filtered[openIdx] : null;
   const openEx = openText ? getExplanation(openText) : null;
   return (
     <div>
       <div className="chips">
-        {items.map((t, i) => {
+        {filtered.map((t, i) => {
           const ex = getExplanation(t);
           return (
             <span key={i} className={`chip${openIdx === i ? " active" : ""}`}>
@@ -350,47 +369,16 @@ export function StageRenderer(props: StageRendererProps) {
 
   switch (stage.kind) {
     /* ── INBOX ── */
-    case "inbox": {
-      const src = SOURCES.find((s) => s.id === sourceId) ?? SOURCES[0];
-      const isFree = src.id === "free";
-      const freeText = (d as { freeText?: string }).freeText ?? src.text;
-      const freePlaceholder =
-        "Paste your raw requirement here — a Slack message, meeting notes, a voice-memo dump, an email from a VP, half-formed thoughts. Be as messy as you like.\n\n" +
-        "The AI pipeline will extract the business need, run structured analysis, ask clarifying questions, and generate sprint-ready stories + acceptance criteria from exactly what you type.";
+    case "inbox":
       return (
-        <div className="reveal">
-          <div className="source-tabs">
-            {SOURCES.map((s) => (
-              <button key={s.id} className={`source-tab${s.id === sourceId ? " on" : ""}`} onClick={() => setSourceId(s.id)}>
-                <span className="ico"><Icon name={s.icon} size={14} /></span>{s.label}
-              </button>
-            ))}
-          </div>
-          <div className="source-meta"><Icon name={src.icon} size={13} />{src.meta}</div>
-          {isFree ? (
-            <>
-              <textarea
-                className="inbox inbox-edit"
-                aria-label="Free-text requirement input"
-                value={freeText}
-                placeholder={freePlaceholder}
-                onChange={(e) => onChange((prev) => ({ ...(prev as object), freeText: e.target.value } as StageData))}
-              />
-              <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, color: "var(--accent-ink)", fontSize: 12 }}>
-                <Icon name="pencil" size={13} />
-                <span>This is your input — edit it freely. Confirming runs the pipeline on exactly this text.</span>
-              </div>
-            </>
-          ) : (
-            <div className="inbox">{src.text}</div>
-          )}
-          <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 9, color: "var(--muted)", fontSize: 12.5 }}>
-            <Icon name="bulb" size={14} />
-            <span>All sources feed one intake. The pipeline never passes free text between skills — only structured data.</span>
-          </div>
-        </div>
+        <InboxView
+          data={d as InboxData}
+          onChange={(updater: (prev: InboxData) => InboxData) => onChange((prev: StageData) => updater(prev as InboxData) as StageData)}
+          sourceId={sourceId}
+          setSourceId={setSourceId}
+          liveAiEnabled={live}
+        />
       );
-    }
 
     /* ── BUSINESS NEED ── */
     case "need": {
@@ -418,7 +406,7 @@ export function StageRenderer(props: StageRendererProps) {
       const rd = d as RequirementData;
       return (
         <div className="stack reveal">
-          <div><SecLabel icon="users" count={(rd.users ?? []).length}>Users</SecLabel>{editing ? <ChipsEditor items={rd.users ?? []} setItems={(a) => setField("users", a)} icon="users" addLabel="Add user" /> : <HelpChips items={rd.users ?? []} icon="users" />}</div>
+          <div><SecLabel icon="users" count={(rd.users ?? []).filter(u => u.trim()).length}>Users</SecLabel>{editing ? <ChipsEditor items={rd.users ?? []} setItems={(a) => setField("users", a)} icon="users" addLabel="Add user" /> : <HelpChips items={rd.users ?? []} icon="users" />}</div>
           <div><SecLabel icon="target" count={(rd.goals ?? []).length}>Goals</SecLabel>{editing ? <ListEditor items={rd.goals ?? []} setItems={(a) => setField("goals", a)} addLabel="Add goal" /> : <ItemList items={rd.goals ?? []} />}</div>
           <div><SecLabel icon="bulb" count={(rd.assumptions ?? []).length}>Assumptions</SecLabel>{editing ? <ListEditor items={rd.assumptions ?? []} setItems={(a) => setField("assumptions", a)} addLabel="Add assumption" /> : <ItemList items={rd.assumptions ?? []} />}</div>
           <div><SecLabel icon="shield" count={(rd.constraints ?? []).length}>Constraints</SecLabel>{editing ? <ListEditor items={rd.constraints ?? []} setItems={(a) => setField("constraints", a)} addLabel="Add constraint" /> : <ItemList items={rd.constraints ?? []} />}</div>
@@ -466,11 +454,22 @@ export function StageRenderer(props: StageRendererProps) {
                       <div className="q-why">{q.why}</div>
                     )}
                     {(q.examples ?? []).length > 0 && (
-                      <div className="q-examples">
-                        <span className="q-examples-label">e.g.</span>
-                        {(q.examples ?? []).map((ex, j) => (
-                          <span key={j} className="q-example-chip">{ex}</span>
-                        ))}
+                      <div className="q-opts" style={{ marginBottom: 10 }}>
+                        <span className="q-examples-label" style={{ alignSelf: "center" }}>e.g.</span>
+                        {(q.examples ?? []).map((opt, j) => {
+                          const val = answers[q.id] ?? "";
+                          const filled = val.trim().length > 0;
+                          return (
+                            <button
+                              key={j}
+                              className={`q-opt${val === opt ? " sel" : ""}`}
+                              disabled={filled && val !== opt}
+                              onClick={() => !filled && setAnswer(q.id, opt)}
+                            >
+                              {opt}
+                            </button>
+                          );
+                        })}
                       </div>
                     )}
                     <div className="q-answer-wrap">
@@ -489,6 +488,10 @@ export function StageRenderer(props: StageRendererProps) {
         </div>
       );
     }
+
+    /* ── SIGN-OFF ── */
+    case "signoff":
+      return <SignoffView data={d as SignoffData} onChange={onChange} />;
 
     /* ── EPIC ── */
     case "epic": {

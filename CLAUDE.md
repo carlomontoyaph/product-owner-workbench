@@ -64,9 +64,12 @@ Uses React hooks and context via `useWorkbench` custom hook in `src/hooks/useWor
 
 ### Known Prototype Characteristics
 
-- In-memory state only (no persistent backend)
-- Single-user, client-side application
+- In-memory state only (no persistent backend); save/load via browser storage
+- Multi-person approval tracking (Sign-off feature supports multiple named reviewers/approvers with timestamps)
+- Server-side AI-powered file extraction for the Requirement Inbox (supports contextual insights from uploaded documents)
+- Client-side pipeline editing and management with optional live AI analysis
 - OpenAI API key stored securely server-side via `process.env.OPENAI_API_KEY` (never exposed to browser)
+- No built-in authentication; all routes are open (network-level restrictions required for deployment)
 - Basic error handling (room for improvement — see `/product-readiness` audit for details)
 - No analytics or observability (Sentry integration ready but not configured)
 

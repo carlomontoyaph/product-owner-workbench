@@ -5,7 +5,7 @@ import { JsonView } from "@/components/Shared/JsonView";
 import { Meter } from "@/components/Shared/Meter";
 import { Tooltip } from "@/components/Shared/Tooltip";
 import type { StageMetadata } from "@/lib/stages";
-import type { StageStatus, StageData, ReadinessData } from "@/lib/types";
+import type { StageStatus, StageData, ReadinessData, InboxData } from "@/lib/types";
 
 interface InspectorProps {
   stage: StageMetadata;
@@ -60,6 +60,7 @@ export function Inspector({ stage, status, data, onRun, preserve, onTogglePreser
   const produced = status === "review" || status === "done";
   const isInbox = stage.kind === "inbox";
   const isExport = stage.kind === "export";
+  const isSignoff = stage.kind === "signoff";
   const contract = produced && data ? data : null;
   const aiConf = produced && data ? (data as { confidence?: number; improvementTips?: string[] }) : null;
 
@@ -70,13 +71,13 @@ export function Inspector({ stage, status, data, onRun, preserve, onTogglePreser
   return (
     <div className="inspector">
       <div className="insp-head">
-        <div className="eyebrow">{isInbox ? "Intake" : isExport ? "Output" : "Active skill"}</div>
+        <div className="eyebrow">{isSignoff ? "Approval" : isInbox ? "Intake" : isExport ? "Output" : "Active skill"}</div>
       </div>
       <div className="insp-scroll scroll">
         <div className="skill-card">
           <div className="skill-top">
             <div className="skill-name">
-              <Icon name={isExport ? "download" : isInbox ? "inbox" : "command"} size={14} />
+              <Icon name={isSignoff ? "check" : isExport ? "download" : isInbox ? "inbox" : "command"} size={14} />
               {stage.skillName}
             </div>
             <div className="skill-purpose">{stage.purpose}</div>
@@ -85,7 +86,7 @@ export function Inspector({ stage, status, data, onRun, preserve, onTogglePreser
             <div className="io-row"><span className="io-tag in">IN</span><span className="io-desc">{stage.io.in}</span></div>
             <div className="io-row"><span className="io-tag out">OUT</span><span className="io-desc">{stage.io.out}</span></div>
           </div>
-          {!isInbox && !isExport && (
+          {!isInbox && !isExport && !isSignoff && (
             <>
               <button
                 className={`json-toggle${showJson ? " open" : ""}`}
@@ -99,7 +100,7 @@ export function Inspector({ stage, status, data, onRun, preserve, onTogglePreser
           )}
         </div>
 
-        {!isInbox && !isExport && (
+        {!isInbox && !isExport && !isSignoff && (
           <label className="preserve-toggle">
             <input
               type="checkbox"
@@ -112,7 +113,7 @@ export function Inspector({ stage, status, data, onRun, preserve, onTogglePreser
           </label>
         )}
 
-        {!isExport && (
+        {!isExport && !isSignoff && (
           <button
             className={`btn ${status === "ready" ? "primary" : ""} lg`}
             style={{ width: "100%", justifyContent: "center", marginTop: 14 }}
@@ -133,6 +134,16 @@ export function Inspector({ stage, status, data, onRun, preserve, onTogglePreser
           <ReadinessSignals data={data as ReadinessData} />
         )}
 
+        {isSignoff && (
+          <div className="insp-block">
+            <div className="insp-block-title"><div className="eyebrow">Approval record</div></div>
+            <div style={{ fontSize: 12.5, color: "var(--muted)", lineHeight: 1.6 }}>
+              Manual gate — captures reviewers and approvers. Travels with the export.
+              Empty sign-off is allowed.
+            </div>
+          </div>
+        )}
+
         {isExport && (
           <div className="insp-block">
             <div className="insp-block-title"><div className="eyebrow">Artifact</div></div>
@@ -150,16 +161,51 @@ export function Inspector({ stage, status, data, onRun, preserve, onTogglePreser
         )}
 
         {isInbox && (
-          <div className="insp-block">
-            <div className="insp-block-title"><div className="eyebrow">Orchestration</div></div>
-            <div style={{ fontSize: 12.5, color: "var(--muted)", lineHeight: 1.6 }}>
-              The workbench is the orchestrator. It runs each skill in order and passes{" "}
-              <span className="mono" style={{ fontSize: 11.5, color: "var(--ink-2)" }}>
-                structured JSON
-              </span>{" "}
-              between them — never free-form text. Skills never call each other.
+          <>
+            <div className="insp-block">
+              <div className="insp-block-title"><div className="eyebrow">Context extraction</div></div>
+              <div className="check-list">
+                <div className="check pass">
+                  <span className="cico"><Icon name="check-circle" size={15} /></span>Files are temporary — used for extraction, then discarded.
+                </div>
+                <div className="check pass">
+                  <span className="cico"><Icon name="check-circle" size={15} /></span>Insights persist, grouped into context cards.
+                </div>
+                <div className="check pass">
+                  <span className="cico"><Icon name="check-circle" size={15} /></span>Every insight can keep its source for traceability.
+                </div>
+              </div>
             </div>
-          </div>
+            <div className="insp-block">
+              <div className="insp-block-title"><div className="eyebrow">Extraction limits</div></div>
+              <div className="lim-list">
+                <div className="lim">
+                  <div className="lim-val">10</div>
+                  <div className="lim-txt">
+                    <div className="lim-label">Max insights per file</div>
+                    <div className="lim-sub">If a file yields more, we keep the 10 most relevant.</div>
+                  </div>
+                </div>
+                <div className="lim">
+                  <div className="lim-val">{data && typeof data === "object" && "cards" in data ? (data as InboxData).cards?.reduce((n: number, c) => n + (c.insights?.length || 0), 0) || 0 : 0}</div>
+                  <div className="lim-txt">
+                    <div className="lim-label">Insights on this requirement</div>
+                    <div className="lim-sub">Grouped into context cards by category.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="insp-block">
+              <div className="insp-block-title"><div className="eyebrow">Orchestration</div></div>
+              <div style={{ fontSize: 12.5, color: "var(--muted)", lineHeight: 1.6 }}>
+                The workbench is the orchestrator. It runs each skill in order and passes{" "}
+                <span className="mono" style={{ fontSize: 11.5, color: "var(--ink-2)" }}>
+                  structured JSON
+                </span>{" "}
+                between them — never free-form text. Skills never call each other.
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>
