@@ -75,5 +75,11 @@ Uses React hooks and context via `useWorkbench` custom hook in `src/hooks/useWor
 
 ### For Claude Code Sessions
 
+**Pre-commit checks:** This repo enforces code quality at commit time via Husky hooks:
+- **Secrets scan** — Blocks commits containing `.env.local` or API key patterns (OpenAI, Stripe)
+- **ESLint** — Runs `npm run lint` and blocks commits with linting errors/warnings
+
+Before proposing a commit, run `npm run lint` locally and fix any issues so they don't block the hook. This mirrors the CI lint gate (`.github/workflows/deploy.yml`), so anything that passes the hook will also pass CI/deploy.
+
 Use the `/product-readiness` skill to audit the codebase for production-readiness before scaling to commercial users.
 

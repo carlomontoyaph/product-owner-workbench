@@ -70,7 +70,7 @@ async function extractInsights(
       return { cards: json.cards };
     }
     return { cards: [], error: json.error || "Failed to extract" };
-  } catch (err) {
+  } catch {
     return { cards: [], error: "Network error" };
   }
 }
@@ -97,11 +97,16 @@ function InsightModal({
   const [srcFile, setSrcFile] = useState(isFile ? initSrc : fileNames[0] || "");
   const [srcOther, setSrcOther] = useState(!initSrc || isFile ? "" : initSrc);
   const titleRef = useRef<HTMLInputElement>(null);
+  const onCancelRef = useRef(onCancel);
+
+  useEffect(() => {
+    onCancelRef.current = onCancel;
+  }, [onCancel]);
 
   useEffect(() => {
     const t = setTimeout(() => titleRef.current?.focus(), 60);
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCancel();
+      if (e.key === "Escape") onCancelRef.current();
     };
     window.addEventListener("keydown", onKey);
     return () => {
@@ -440,7 +445,6 @@ export function InboxView({
   const cards = data.cards ?? [];
 
   const insightCount = cards.reduce((n, c) => n + c.insights.length, 0);
-  const hasInput = Object.values(inputs).some((t) => t.trim()) || insightCount > 0;
   const fileNames = sources.filter((s) => s.status === "ok" || s.status === "empty").map((s) => s.name);
   const acceptedCount = sources.filter((s) => s.status !== "rejected").length;
   const cardInsightCountFor = (name: string) => cards.reduce((n, c) => n + c.insights.filter((it) => it.source === name).length, 0);
@@ -660,7 +664,7 @@ export function InboxView({
         <p className="rq-sec-sub">Add evidence and background that helps the AI understand the request — tickets, research, docs, screenshots.</p>
         <div className="rq-tone">
           <Icon name="sparkles" size={16} />
-          <span>You can be as messy as you want. We'll help extract and organize the important context — then throw the files away.</span>
+          <span>You can be as messy as you want. We&apos;ll help extract and organize the important context — then throw the files away.</span>
         </div>
         <div
           className={`rq-drop${dragging ? " drag" : ""}`}

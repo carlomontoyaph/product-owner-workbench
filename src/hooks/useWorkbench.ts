@@ -1,8 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { WorkbenchState, StageId, StageData, StageStatus, SignoffData } from "@/lib/types";
-import { STAGES, STAGE_IDS, AI_STAGES, stageIndex, nextStageId } from "@/lib/stages";
-import { SOURCES } from "@/lib/mocks";
+import { STAGES, STAGE_IDS, AI_STAGES, stageIndex } from "@/lib/stages";
 import { buildContext } from "@/lib/context-builder";
 import { mergeStageData } from "@/lib/merge";
 import { LOCAL_STORAGE_KEY } from "@/utils/constants";
@@ -100,11 +99,6 @@ export function useWorkbench() {
     );
     return () => clearInterval(t);
   }, [st.frozen]);
-
-  const showToast = useCallback((msg: string, ico = "check-circle") => {
-    // dispatched up to Workbench via returned fn — not stored in workbench state
-    void { msg, ico };
-  }, []);
 
   // ── stage execution ──────────────────────────────────────────────────────
 

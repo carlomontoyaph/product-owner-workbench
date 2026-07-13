@@ -1,5 +1,4 @@
 import type { WorkbenchState, StageContext, DiscoveryQuestion } from "./types";
-import { SOURCES } from "./mocks";
 
 // Mirrors buildContext() in app.jsx
 export function buildContext(state: WorkbenchState): StageContext {

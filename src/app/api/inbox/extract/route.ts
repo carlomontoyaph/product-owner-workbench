@@ -7,6 +7,16 @@ import { withRetry, RetryableError } from "@/lib/ai-retry";
 const MODEL = "gpt-4o";
 const MAX_TOKENS = 1500;
 
+interface ExtractedCard {
+  category: "need" | "feedback" | "evidence" | "risk" | "constraint";
+  title: string;
+  insight: string;
+}
+
+interface ExtractResponse {
+  cards?: ExtractedCard[];
+}
+
 function getClient() {
   return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 }
@@ -68,9 +78,9 @@ export async function POST(req: NextRequest) {
       { tries: 3, route: "inbox-extract", model: MODEL }
     );
 
-    let parsed: any;
+    let parsed: ExtractResponse;
     try {
-      parsed = parseJSON(txt);
+      parsed = parseJSON(txt) as ExtractResponse;
     } catch {
       parsed = {};
     }

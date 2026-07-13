@@ -16,6 +16,7 @@ export class RetryableError extends Error {
 
 export async function withRetry<T>(
   fn: () => Promise<T>,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   { tries = 3, route = "unknown", model = "unknown" }: { tries?: number; route?: string; model?: string } = {}
 ): Promise<T> {
   for (let i = 0; i < tries; i++) {

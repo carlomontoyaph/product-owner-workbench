@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Icon } from "@/components/Shared/Icons";
 import { buildSignoffMarkdown } from "@/lib/markdown-builder";
-import type { SignoffData, SignoffPerson, SignoffGroup, StageData } from "@/lib/types";
+import type { SignoffData, SignoffGroup, StageData } from "@/lib/types";
 
 interface SignoffViewProps {
   data: SignoffData | null | undefined;
@@ -27,11 +27,13 @@ function SignoffGroup({
   group,
   type,
   onUpdate,
+  now,
 }: {
   title: string;
   group: SignoffGroup | undefined;
   type: "reviewer" | "approver";
   onUpdate: (g: SignoffGroup) => void;
+  now: string;
 }) {
   const g = group ?? { inCall: [], offline: [], callStartedAt: undefined };
   const allNames = [...(g.inCall ?? []), ...(g.offline ?? [])].map((p) => p.name);
@@ -50,7 +52,7 @@ function SignoffGroup({
         {(g.inCall ?? []).length > 0 && (
           <div className="so-call-time" style={{ marginBottom: 10 }}>
             <div className="so-live-dot" />
-            <span>{g.callStartedAt || getManilaTime()}</span>
+            <span>{now}</span>
           </div>
         )}
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -196,6 +198,7 @@ export function SignoffView({ data, onChange }: SignoffViewProps) {
           onUpdate={(g) => {
             onChange({ ...d, reviewers: g });
           }}
+          now={liveTime}
         />
         <SignoffGroup
           title="Approvers"
@@ -204,6 +207,7 @@ export function SignoffView({ data, onChange }: SignoffViewProps) {
           onUpdate={(g) => {
             onChange({ ...d, approvers: g });
           }}
+          now={liveTime}
         />
       </div>
 

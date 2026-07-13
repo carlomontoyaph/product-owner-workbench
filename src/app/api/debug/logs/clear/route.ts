@@ -1,7 +1,6 @@
-import { NextRequest } from "next/server";
 import { clearLogs } from "@/lib/ai-debug";
 
-export async function POST(req: NextRequest) {
+export async function POST() {
   try {
     clearLogs();
     return Response.json({ ok: true });

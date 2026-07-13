@@ -8,13 +8,11 @@ import { buildMarkdown } from "@/lib/markdown-builder";
 import { SignoffView } from "./SignoffView";
 import { InboxView } from "./InboxView";
 import { EXPORT_TARGETS } from "@/lib/stages";
-import { SOURCES } from "@/lib/mocks";
 import { RUN_STEPS } from "@/utils/constants";
 import type { StageMetadata } from "@/lib/stages";
 import type {
   StageStatus,
   StageData,
-  StageId,
   InboxData,
   BusinessNeedData,
   RequirementData,
@@ -357,13 +355,6 @@ export function StageRenderer(props: StageRendererProps) {
   const d = data ?? {};
   const mutate = (fn: (o: Record<string, unknown>) => void) => {
     onChange((prev) => {
-      const n = JSON.parse(JSON.stringify(prev ?? {}));
-      fn(n);
-      return n;
-    });
-  };
-  const reorderMutate = (fn: (o: Record<string, unknown>) => void) => {
-    onReorder((prev) => {
       const n = JSON.parse(JSON.stringify(prev ?? {}));
       fn(n);
       return n;

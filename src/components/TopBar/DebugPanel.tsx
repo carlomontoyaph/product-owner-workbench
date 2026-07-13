@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Icon } from "@/components/Shared/Icons";
 import type { DebugLogRecord, DebugLogsResponse } from "@/app/api/debug/logs/route";
 
@@ -16,43 +16,50 @@ export function DebugPanel() {
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<string | null>(null);
 
-  const fetchLogs = async (newOffset = 0) => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/debug/logs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          limit: 50,
-          offset: newOffset,
-          filterRoute: filterRoute || undefined,
-          filterReason: filterReason || undefined,
-        }),
-      });
-      const data = (await res.json()) as DebugLogsResponse;
-      setLogs(data.logs || []);
-      setHasMore(data.hasMore);
-      setTotalCount(data.totalCount);
-      setLastRefresh(data.refreshedAt);
-      setOffset(newOffset);
-    } catch (err) {
-      console.error("[DebugPanel] fetch failed:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchLogs = useCallback(
+    async (newOffset = 0) => {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/debug/logs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            limit: 50,
+            offset: newOffset,
+            filterRoute: filterRoute || undefined,
+            filterReason: filterReason || undefined,
+          }),
+        });
+        const data = (await res.json()) as DebugLogsResponse;
+        setLogs(data.logs || []);
+        setHasMore(data.hasMore);
+        setTotalCount(data.totalCount);
+        setLastRefresh(data.refreshedAt);
+        setOffset(newOffset);
+      } catch (err) {
+        console.error("[DebugPanel] fetch failed:", err);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [filterRoute, filterReason]
+  );
 
   useEffect(() => {
     if (isOpen) {
-      fetchLogs();
+      queueMicrotask(() => {
+        fetchLogs();
+      });
     }
-  }, [isOpen]);
+  }, [isOpen, fetchLogs]);
 
   useEffect(() => {
     if (!isOpen) return;
-    setOffset(0);
-    fetchLogs(0);
-  }, [filterRoute, filterReason]);
+    queueMicrotask(() => {
+      setOffset(0);
+      fetchLogs(0);
+    });
+  }, [filterRoute, filterReason, isOpen, fetchLogs]);
 
   useEffect(() => {
     if (!autoRefresh || !isOpen) return;
@@ -60,7 +67,7 @@ export function DebugPanel() {
       fetchLogs(0);
     }, 5000);
     return () => clearInterval(interval);
-  }, [autoRefresh, isOpen]);
+  }, [autoRefresh, isOpen, fetchLogs]);
 
   const downloadCSV = () => {
     if (logs.length === 0) return;
