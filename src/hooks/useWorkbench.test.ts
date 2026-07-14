@@ -176,7 +176,7 @@ describe('useWorkbench: updateData', () => {
 
     // Manually delete a stage's data to simulate an edge case (should never happen in practice,
     // but this tests the defensive ?? fallback in updateData)
-    // @ts-ignore
+    // @ts-expect-error - intentionally deleting a required stage to simulate uninitialized data
     delete result.current.st.data['business-need'];
 
     // This should not crash — the ?? {} fallback should provide an empty object to the updater

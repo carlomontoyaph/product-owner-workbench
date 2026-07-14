@@ -21,7 +21,7 @@ function createMinimalState(): WorkbenchState {
     data: {
       inbox: { inputs: {}, sources: [], cards: [] },
       signoff: {},
-    },
+    } as unknown as WorkbenchState['data'],
     sourceId: 'free',
     elapsed: 0,
     frozen: false,
@@ -96,7 +96,7 @@ describe('save-load: deserialization', () => {
 
   it('defaults missing live flag to true', () => {
     const state = createMinimalState();
-    // @ts-ignore - intentionally removing live to test default
+    // @ts-expect-error - intentionally removing live to test default
     delete state.live;
     const json = serializeSession(state);
     const restored = deserializeSession(json);
@@ -106,7 +106,7 @@ describe('save-load: deserialization', () => {
 
   it('defaults missing preserve flag to true', () => {
     const state = createMinimalState();
-    // @ts-ignore
+    // @ts-expect-error - intentionally removing preserve to test default
     delete state.preserve;
     const json = serializeSession(state);
     const restored = deserializeSession(json);
@@ -116,7 +116,7 @@ describe('save-load: deserialization', () => {
 
   it('defaults missing copilotMessages to empty array', () => {
     const state = createMinimalState();
-    // @ts-ignore
+    // @ts-expect-error - intentionally removing copilotMessages to test default
     delete state.copilotMessages;
     const json = serializeSession(state);
     const restored = deserializeSession(json);
@@ -128,7 +128,7 @@ describe('save-load: deserialization', () => {
 describe('save-load: migrations', () => {
   it('migrates pre-signoff state: export not locked', () => {
     const oldState = createMinimalState();
-    // @ts-ignore
+    // @ts-expect-error - intentionally removing signoff status to test migration
     delete oldState.status.signoff;
     oldState.status.export = 'ready';
 
@@ -142,7 +142,7 @@ describe('save-load: migrations', () => {
 
   it('migrates pre-signoff state: export already locked', () => {
     const oldState = createMinimalState();
-    // @ts-ignore
+    // @ts-expect-error - intentionally removing signoff status to test migration
     delete oldState.status.signoff;
     oldState.status.export = 'locked';
 
@@ -166,10 +166,9 @@ describe('save-load: migrations', () => {
     const state = {
       ...createMinimalState(),
       data: {
-        // @ts-ignore - old shape
         inbox: { freeText: 'old free text here' },
       },
-    };
+    } as unknown as WorkbenchState;
 
     const json = serializeSession(state);
     const restored = deserializeSession(json);
@@ -183,7 +182,7 @@ describe('save-load: migrations', () => {
 
   it('initializes missing inbox data to defaults', () => {
     const state = createMinimalState();
-    delete state.data.inbox;
+    delete (state.data as Partial<WorkbenchState['data']>).inbox;
 
     const json = serializeSession(state);
     const restored = deserializeSession(json);
@@ -197,7 +196,7 @@ describe('save-load: migrations', () => {
 
   it('initializes missing signoff data', () => {
     const state = createMinimalState();
-    // @ts-ignore - intentionally removing signoff to test default
+    // @ts-expect-error - intentionally removing signoff to test default
     delete state.data.signoff;
 
     const json = serializeSession(state);

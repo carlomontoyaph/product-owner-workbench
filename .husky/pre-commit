@@ -25,4 +25,12 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+# Run unit/hook/API tests (fast — Vitest, no browser) to catch regressions
+echo "🧪 Running tests..."
+npm test -- --run
+if [ $? -ne 0 ]; then
+  echo "❌ ERROR: Tests failed. Fix the issues above before committing."
+  exit 1
+fi
+
 exit 0
