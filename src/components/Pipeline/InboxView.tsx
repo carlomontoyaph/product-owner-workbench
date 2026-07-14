@@ -34,23 +34,10 @@ function nowLabel(): string {
   return `Today · ${h}:${m} ${ap}`;
 }
 
-async function readFileText(file: File): Promise<string> {
-  return new Promise((resolve) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result || ""));
-    r.onerror = () => resolve("");
-    r.readAsText(file);
-  });
-}
-
 async function extractInsights(
-  fileName: string,
-  content: string,
+  file: File,
   liveAiEnabled: boolean
 ): Promise<{ cards: Array<{ category: string; title: string; insight: string }>; error?: string }> {
-  const clip = (content || "").slice(0, 12000).trim();
-  if (!clip) return { cards: [], error: "empty" };
-
   if (!liveAiEnabled) {
     return {
       cards: [
@@ -60,12 +47,19 @@ async function extractInsights(
   }
 
   try {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("liveAiEnabled", "true");
+
     const res = await fetch("/api/inbox/extract", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fileName, content, liveAiEnabled: true }),
+      body: formData,
     });
-    const json = (await res.json()) as { success?: boolean; cards?: Array<{ category: string; title: string; insight: string }>; error?: string };
+    const json = (await res.json()) as {
+      success?: boolean;
+      cards?: Array<{ category: string; title: string; insight: string }>;
+      error?: string;
+    };
     if (json.success && json.cards) {
       return { cards: json.cards };
     }
@@ -452,7 +446,14 @@ export function InboxView({
   const addInsightsGrouped = useCallback(
     (items: Array<{ catKey: ContextCategory; title: string; insight: string }>, fileName: string) => {
       onChange((prev) => {
-        const next = (prev.cards ?? []).map((c) => ({ ...c, insights: c.insights.slice() }));
+        // Strip any existing insights from this file before adding new ones (replace, not accumulate)
+        let next = (prev.cards ?? []).map((c) => ({
+          ...c,
+          insights: c.insights.filter((it) => it.source !== fileName),
+        }));
+        // Remove any cards that became empty after stripping the old insights
+        next = next.filter((c) => c.insights.length > 0 || c.custom);
+
         items.forEach((it) => {
           let g = next.find((c) => c.catKey === it.catKey && !c.custom);
           if (!g) {
@@ -530,32 +531,30 @@ export function InboxView({
           sources: [...(prev.sources ?? []), { id: hid, name: f.name, time: nowLabel(), status: "processing" }],
         }));
 
-        readFileText(f).then((txt) =>
-          extractInsights(f.name, txt, liveAiEnabled).then(({ cards: extractedCards, error: extractError }) => {
-            onChange((prev) => ({
-              ...prev,
-              sources: (prev.sources ?? []).map((s) =>
-                s.id === hid
-                  ? {
-                      ...s,
-                      status: extractedCards.length ? "ok" : "empty",
-                      note: extractedCards.length
-                        ? undefined
-                        : extractError === "empty"
-                        ? "No readable text found. Binary files (PDF, images, Office docs) can't be read in this prototype — add insights manually, or paste the text."
-                        : "No usable product context found in this file.",
-                    }
-                  : s
-              ),
-            }));
-            if (extractedCards.length) {
-              addInsightsGrouped(
-                extractedCards.map((c) => ({ catKey: (c.category as ContextCategory) || "evidence", title: c.title, insight: c.insight })),
-                f.name
-              );
-            }
-          })
-        );
+        extractInsights(f, liveAiEnabled).then(({ cards: extractedCards, error: extractError }) => {
+          onChange((prev) => ({
+            ...prev,
+            sources: (prev.sources ?? []).map((s) =>
+              s.id === hid
+                ? {
+                    ...s,
+                    status: extractError ? "error" : extractedCards.length ? "ok" : "empty",
+                    note: extractedCards.length
+                      ? undefined
+                      : extractError
+                      ? extractError
+                      : "No usable product context found in this file.",
+                  }
+                : s
+            ),
+          }));
+          if (extractedCards.length) {
+            addInsightsGrouped(
+              extractedCards.map((c) => ({ catKey: (c.category as ContextCategory) || "evidence", title: c.title, insight: c.insight })),
+              f.name
+            );
+          }
+        });
       });
     },
     [acceptedCount, onChange, addInsightsGrouped, liveAiEnabled]
@@ -687,6 +686,11 @@ export function InboxView({
               </span>
             </div>
             <div className="rq-drop-meta">Up to 25&nbsp;MB each · max 10 files · files are used for extraction only, then discarded</div>
+            <div className="rq-drop-reliability">
+              <span style={{ fontSize: "12px", color: "#666" }}>
+                ✓ Most reliable: <strong>.txt, .md, .csv</strong> · Less reliable: .pdf, .docx, .xlsx
+              </span>
+            </div>
             <div className="rq-types">
               {ACCEPTED.map((t) => (
                 <span key={t} className="rq-type">

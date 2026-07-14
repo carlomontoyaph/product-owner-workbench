@@ -159,13 +159,14 @@ describe('API Routes — Layer 3 (OpenAI integration)', () => {
   describe('POST /api/inbox/extract', () => {
     it('returns mock extraction when liveAiEnabled is false', async () => {
       const { POST } = await import('./inbox/extract/route');
+      const formData = new FormData();
+      const file = new File(['Some content'], 'test.txt', { type: 'text/plain' });
+      formData.append('file', file);
+      formData.append('liveAiEnabled', 'false');
+
       const req = new NextRequest('http://localhost:3000/api/inbox/extract', {
         method: 'POST',
-        body: JSON.stringify({
-          fileName: 'test.txt',
-          content: 'Some content',
-          liveAiEnabled: false,
-        }),
+        body: formData,
       });
 
       const response = await POST(req);
@@ -180,13 +181,14 @@ describe('API Routes — Layer 3 (OpenAI integration)', () => {
       delete process.env.OPENAI_API_KEY;
 
       const { POST } = await import('./inbox/extract/route');
+      const formData = new FormData();
+      const file = new File(['Some content'], 'test.txt', { type: 'text/plain' });
+      formData.append('file', file);
+      formData.append('liveAiEnabled', 'true');
+
       const req = new NextRequest('http://localhost:3000/api/inbox/extract', {
         method: 'POST',
-        body: JSON.stringify({
-          fileName: 'test.txt',
-          content: 'Some content',
-          liveAiEnabled: true,
-        }),
+        body: formData,
       });
 
       const response = await POST(req);
@@ -217,13 +219,14 @@ describe('API Routes — Layer 3 (OpenAI integration)', () => {
       });
 
       const { POST } = await import('./inbox/extract/route');
+      const formData = new FormData();
+      const file = new File(['Users have trouble logging in'], 'requirements.txt', { type: 'text/plain' });
+      formData.append('file', file);
+      formData.append('liveAiEnabled', 'true');
+
       const req = new NextRequest('http://localhost:3000/api/inbox/extract', {
         method: 'POST',
-        body: JSON.stringify({
-          fileName: 'requirements.txt',
-          content: 'Users have trouble logging in',
-          liveAiEnabled: true,
-        }),
+        body: formData,
       });
 
       const response = await POST(req);
@@ -255,13 +258,14 @@ describe('API Routes — Layer 3 (OpenAI integration)', () => {
       });
 
       const { POST } = await import('./inbox/extract/route');
+      const formData = new FormData();
+      const file = new File(['content'], 'test.txt', { type: 'text/plain' });
+      formData.append('file', file);
+      formData.append('liveAiEnabled', 'true');
+
       const req = new NextRequest('http://localhost:3000/api/inbox/extract', {
         method: 'POST',
-        body: JSON.stringify({
-          fileName: 'test.txt',
-          content: 'content',
-          liveAiEnabled: true,
-        }),
+        body: formData,
       });
 
       const response = await POST(req);
@@ -270,26 +274,27 @@ describe('API Routes — Layer 3 (OpenAI integration)', () => {
       expect(json.cards).toHaveLength(10);
     });
 
-    it('returns empty cards on extraction error', async () => {
+    it('returns error on extraction failure', async () => {
       process.env.OPENAI_API_KEY = 'test-key';
 
       const { __mocks__ } = await import('openai');
       __mocks__.mockCreate.mockRejectedValue(new Error('API error'));
 
       const { POST } = await import('./inbox/extract/route');
+      const formData = new FormData();
+      const file = new File(['content'], 'test.txt', { type: 'text/plain' });
+      formData.append('file', file);
+      formData.append('liveAiEnabled', 'true');
+
       const req = new NextRequest('http://localhost:3000/api/inbox/extract', {
         method: 'POST',
-        body: JSON.stringify({
-          fileName: 'test.txt',
-          content: 'content',
-          liveAiEnabled: true,
-        }),
+        body: formData,
       });
 
       const response = await POST(req);
       const json = await response.json();
 
-      expect(json.success).toBe(true);
+      expect(json.success).toBe(false);
       expect(json.cards).toHaveLength(0);
       expect(json.error).toBeDefined();
     });

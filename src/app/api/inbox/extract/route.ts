@@ -3,9 +3,12 @@ import OpenAI from "openai";
 import { parseJSON } from "@/lib/json-parser";
 import { logAiFailure } from "@/lib/ai-debug";
 import { withRetry, RetryableError } from "@/lib/ai-retry";
+import { extractTextFromFile } from "@/lib/file-extract";
 
 const MODEL = "gpt-4o";
 const MAX_TOKENS = 1500;
+const TEMPERATURE = 0;
+const SEED = 42;
 
 interface ExtractedCard {
   category: "need" | "feedback" | "evidence" | "risk" | "constraint";
@@ -40,6 +43,8 @@ async function extractFromContent(client: OpenAI, fileName: string, content: str
   const res = await client.chat.completions.create({
     model: MODEL,
     max_tokens: MAX_TOKENS,
+    temperature: TEMPERATURE,
+    seed: SEED,
     response_format: { type: "json_object" },
     messages: [
       { role: "system", content: systemPrompt },
@@ -51,11 +56,42 @@ async function extractFromContent(client: OpenAI, fileName: string, content: str
 
 export async function POST(req: NextRequest) {
   try {
-    const { fileName, content, liveAiEnabled } = await req.json() as {
-      fileName: string;
-      content: string;
-      liveAiEnabled: boolean;
-    };
+    const formData = await req.formData();
+    const file = formData.get("file") as File | null;
+    const liveAiEnabled = formData.get("liveAiEnabled") === "true";
+
+    if (!file) {
+      return NextResponse.json(
+        { success: false, cards: [], error: "No file provided" },
+        { status: 400 }
+      );
+    }
+
+    const fileName = file.name;
+    const arrayBuffer = await file.arrayBuffer();
+
+    // Extract text from the file (handles all supported formats)
+    const { text: extractedText, error: extractionError } = await extractTextFromFile(
+      fileName,
+      arrayBuffer
+    );
+
+    // If extraction itself failed (unsupported type, parse error, etc.), return error immediately
+    if (extractionError) {
+      return NextResponse.json({
+        success: false,
+        cards: [],
+        error: extractionError,
+      });
+    }
+
+    // If no text was extracted (e.g., empty file), return empty cards legitimately
+    if (!extractedText.trim()) {
+      return NextResponse.json({
+        success: true,
+        cards: [],
+      });
+    }
 
     if (!liveAiEnabled) {
       return NextResponse.json({
@@ -74,7 +110,7 @@ export async function POST(req: NextRequest) {
     const client = getClient();
 
     const txt = await withRetry(
-      async () => extractFromContent(client, fileName, content),
+      async () => extractFromContent(client, fileName, extractedText),
       { tries: 3, route: "inbox-extract", model: MODEL }
     );
 
@@ -99,7 +135,7 @@ export async function POST(req: NextRequest) {
       retryCount,
     });
     return NextResponse.json({
-      success: true,
+      success: false,
       cards: [],
       error: classification.label,
     });
