@@ -10,7 +10,7 @@ import { serializeSession, deserializeSession, saveWithPicker } from "@/lib/save
 // ── initial state ─────────────────────────────────────────────────────────────
 
 function initData(): Partial<Record<StageId, StageData>> {
-  return {};
+  return { inbox: { inputs: {}, sources: [], cards: [] } };
 }
 
 function defaultState(): WorkbenchState {
@@ -239,7 +239,7 @@ export function useWorkbench() {
       const wasDone = stRef.current.status[stageId] === "done";
       if (wasDone && !silent) onToast?.("Edited — later steps reset to re-confirm", "settings");
       setSt((p) => {
-        const cur = p.data[stageId];
+        const cur = p.data[stageId] ?? ({} as StageData);
         const next = typeof updater === "function" ? updater(cur) : updater;
         const data = { ...p.data, [stageId]: next };
         if (!silent && p.status[stageId] === "done") {
