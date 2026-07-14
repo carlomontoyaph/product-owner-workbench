@@ -170,6 +170,30 @@ describe('useWorkbench: updateData', () => {
     // (This is verified by the fact that we don't crash or change status)
     expect(result.current.st.status.inbox).toBe('ready');
   });
+
+  it('handles updateData with function updater on uninitialized stage (safety net)', () => {
+    const { result } = renderHook(() => useWorkbench());
+
+    // Manually delete a stage's data to simulate an edge case (should never happen in practice,
+    // but this tests the defensive ?? fallback in updateData)
+    // @ts-ignore
+    delete result.current.st.data['business-need'];
+
+    // This should not crash — the ?? {} fallback should provide an empty object to the updater
+    act(() => {
+      result.current.updateData('business-need', (prev) => {
+        // If prev is undefined (no safety net), this would crash when trying to access .businessProblem
+        expect(prev).toBeDefined();
+        return {
+          ...prev,
+          businessProblem: 'New problem',
+        };
+      });
+    });
+
+    expect(result.current.st.data['business-need']).toBeDefined();
+    expect(result.current.st.data['business-need']).toHaveProperty('businessProblem');
+  });
 });
 
 describe('useWorkbench: flags', () => {
