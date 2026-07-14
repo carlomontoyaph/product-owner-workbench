@@ -75,11 +75,12 @@ Uses React hooks and context via `useWorkbench` custom hook in `src/hooks/useWor
 
 ### For Claude Code Sessions
 
-**Pre-commit checks:** This repo enforces code quality at commit time via Husky hooks:
+**Pre-commit checks:** This repo enforces code quality at commit time via a Husky hook (`.husky/pre-commit`, wired through `core.hooksPath` + the `prepare` script — run `npm install` after cloning so the hook shims get generated):
 - **Secrets scan** — Blocks commits containing `.env.local` or API key patterns (OpenAI, Stripe)
-- **ESLint** — Runs `npm run lint` and blocks commits with linting errors/warnings
+- **ESLint** — Runs `npm run lint` and blocks commits with linting **errors** (warnings do not block)
+- **Vitest** — Runs `npm test -- --run` (unit/hook/API tests, ~2s) and blocks commits on any failure. Playwright E2E tests are not run pre-commit (too slow) — run `npm run e2e` manually or in CI.
 
-Before proposing a commit, run `npm run lint` locally and fix any issues so they don't block the hook. This mirrors the CI lint gate (`.github/workflows/deploy.yml`), so anything that passes the hook will also pass CI/deploy.
+Before proposing a commit, run `npm run lint` and `npm test -- --run` locally and fix any issues so they don't block the hook. Lint mirrors the CI lint gate (`.github/workflows/deploy.yml`), so anything that passes the hook will also pass CI/deploy.
 
 Use the `/product-readiness` skill to audit the codebase for production-readiness before scaling to commercial users.
 
